@@ -1,0 +1,14 @@
+Array
+(
+    [mode_formulaire] => ajout
+    [num_etu] => 
+    [prenom_etu] => unEtudiant
+    [nom_etu] => Lambda
+    [dte_nais_etu] => 2008-07-18
+    [login_etu] => default9624@univ
+    [mdp_etu] => RM1Straq
+    [id_niv_etu] => 2
+    [id_ac] => 1
+    [montant_insc] => 800000
+    [statut_etu] => Actif
+)

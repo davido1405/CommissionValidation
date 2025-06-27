@@ -1,0 +1,1 @@
+SQLSTATE[42000]: Syntax error or access violation: 1064 Erreur de syntaxe près de 'num_etu='5', id_ac='1', id_niv_etu='2', dte_insc='2025-06-24', montant_insc='500' à la ligne 1
