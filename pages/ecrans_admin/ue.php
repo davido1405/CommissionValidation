@@ -46,7 +46,7 @@ error_reporting(E_ALL);
 
                                         <div class="col-md-6">
                                             <label for="credit_ue" class="form-label">Crédit UE</label>
-                                            <select class="form-select" id="credit_ue" name="credit_ue">
+                                            <select class="form-select" id="credit_ue" name="credit_ue" required>
                                                 <option value="">--Sélectionnez le crédit--</option>
                                                 <?php for ($i = 1; $i <= 10; $i++): ?>
                                                     <option value="<?= $i ?>"><?= $i ?></option>
@@ -54,8 +54,8 @@ error_reporting(E_ALL);
                                             </select>
                                         </div>
                                         <div class="col-md-6">
-                                            <label for="credit_ue" class="form-label">NIVEAU</label>
-                                            <select class="form-select" id="credit_ue" name="credit_ue">
+                                            <label for="id_niv_etu" class="form-label">NIVEAU</label>
+                                            <select class="form-select" id="id_niv_etu" name="id_niv_etu" required>
                                                 <option value="">--Sélectionnez le niveau--</option>
                                                 <?php
                                                     $niveau = $pdo->query("SELECT id_niv_etu, lib_niv_etu FROM niveau_etude");
@@ -68,7 +68,7 @@ error_reporting(E_ALL);
 
                                         <div class="col-md-6">
                                             <label for="id_ens_responsable" class="form-label">Responsable UE</label>
-                                            <select class="form-select" id="id_ens_responsable" name="id_ens_responsable">
+                                            <select class="form-select" id="id_ens_responsable" name="id_ens_responsable" required>
                                                 <option value="">-- Sélectionnez un enseignant disponible --</option>
                                                 <?php
                                                 $stmt = $pdo->prepare("
@@ -83,6 +83,11 @@ error_reporting(E_ALL);
                                                 ?>
                                             </select>
                                         </div>
+                                        <div class="col-md-6">
+                                            <label for="semestre" class="form-label">Semestre</label>
+                                            <input type="text" class="form-control" id="semestre" name="semestre" placeholder="Ex: S1" required>
+                                        </div>
+
                                     </div>
 
                                     <div class="modal-footer">
