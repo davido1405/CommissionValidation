@@ -58,6 +58,15 @@ $ensiegnants = $stmt->fetchAll(PDO::FETCH_ASSOC);
             
             <!-- Main Content Card -->
             <div class="dashboard-card">
+
+                <?php if (!empty($_SESSION['flash_message'])): ?>
+                    <div class="alert alert-success alert-dismissible fade show" role="alert">
+                        <?= htmlspecialchars($_SESSION['flash_message']) ?>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fermer"></button>
+                    </div>
+                    <?php unset($_SESSION['flash_message']); ?>
+                <?php endif; ?>
+
                 <div class="addTeacherForm">
                     <div class="modal-dialog modal-lg">
                         <div class="modal-content">
@@ -413,6 +422,26 @@ $ensiegnants = $stmt->fetchAll(PDO::FETCH_ASSOC);
         </div>
     </div>
 
+    <!--Modal message d'erreur-->
+    <!-- Modal de message -->
+    <div class="modal fade" id="messageModal" tabindex="-1" aria-labelledby="messageModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="messageModalLabel">Notification</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
+            </div>
+            <div class="modal-body" id="messageModalContent">
+                <!-- Le message s'affichera ici -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
+            </div>
+            </div>
+        </div>
+    </div>
+
+
     <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
     <script>
         // Filter functions
@@ -638,6 +667,59 @@ $ensiegnants = $stmt->fetchAll(PDO::FETCH_ASSOC);
             };
             xhr.send();
         }
+
+
+        //Gestion des messages d'erreur
+        function handleTeacherSubmit(event) {
+            event.preventDefault(); // Empêche le rechargement
+
+            const form = document.getElementById('addTeacherForm');
+            const formData = new FormData(form);
+
+            fetch('../pages/ecrans_admin/traitement_enseignant.php', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                const modalContent = document.getElementById('messageModalContent');
+                const modalTitle = document.getElementById('messageModalLabel');
+                const modal = new bootstrap.Modal(document.getElementById('messageModal'));
+
+                if (data.status === 'success') {
+                    modalTitle.textContent = "Succès";
+                    modalContent.innerHTML = `<div class="alert alert-success">${data.message}</div>`;
+
+                    // Réinitialise les champs si en mode ajout
+                    if (form.mode_formulaire.value === 'ajout') {
+                        form.reset();
+
+                        // ✅ Regénère un login et mot de passe automatiques (optionnel)
+                        const newLogin = 'defaultP' + Math.floor(Math.random() * 9000 + 1000) + '@prof-uni.ci';
+                        const newPassword = Math.random().toString(36).slice(-8);
+
+                        document.getElementById('login_ens').value = newLogin;
+                        document.getElementById('mdp_ens').value = newPassword;
+                    }
+                } else {
+                    modalTitle.textContent = "Erreur";
+                    modalContent.innerHTML = `<div class="alert alert-danger">${data.message}</div>`;
+                }
+
+                modal.show();
+            })
+            .catch(error => {
+                console.error('Erreur:', error);
+                const modalContent = document.getElementById('messageModalContent');
+                modalContent.innerHTML = `<div class="alert alert-danger">❌ Une erreur est survenue.</div>`;
+                new bootstrap.Modal(document.getElementById('messageModal')).show();
+            });
+
+            return false; // Empêche la soumission classique
+        }
+   
+
+
 
 
         function manageGradeFunction(id) {

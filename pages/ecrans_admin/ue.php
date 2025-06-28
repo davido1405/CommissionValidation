@@ -1,129 +1,167 @@
+<?php
+require_once (__DIR__ . '/../../config/db.php');
+if (session_status() === PHP_SESSION_NONE) session_start();
 
-        <div class="header">
-            <div class="d-flex align-items-center">
-                <h2 class="page-title">
-                    <i class="fas fa-book me-2"></i>
-                    Gestion UE / ECUE
-                </h2>
-                <div class="ms-4 d-none d-md-block">
-                    <span class="badge bg-success p-2">Année académique: 2024-2025</span>
-                </div>
-            </div>
-            
-            <div class="d-flex align-items-center gap-4">
-                <div class="d-none d-md-flex align-items-center">
-                    <span class="text-dark me-3">Bienvenue, <strong>Thomas Bernard</strong></span>
-                </div>
-                <div class="dropdown me-3">
-                    <a class="btn btn-light position-relative rounded-circle p-2" href="#" role="button" id="notificationDropdown" data-bs-toggle="dropdown" aria-expanded="false">
-                        <i class="fas fa-bell"></i>
-                        <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
-                            4
-                            <span class="visually-hidden">nouvelles notifications</span>
-                        </span>
-                    </a>
-                    <ul class="dropdown-menu dropdown-menu-end shadow" aria-labelledby="notificationDropdown" style="min-width: 320px;">
-                        <li><h6 class="dropdown-header bg-light py-3">Notifications</h6></li>
-                        <li><a class="dropdown-item py-3 border-bottom" href="#">
-                            <div class="d-flex align-items-center">
-                                <div class="flex-shrink-0">
-                                    <div class="bg-primary text-white rounded-circle p-2">
-                                        <i class="fas fa-file-alt"></i>
-                                    </div>
-                                </div>
-                                <div class="flex-grow-1 ms-3">
-                                    <p class="mb-0 fw-bold">12 nouveaux rapports à valider</p>
-                                    <small class="text-muted">Il y a 2 heures</small>
-                                </div>
-                            </div>
-                        </a></li>
-                        <li><hr class="dropdown-divider"></li>
-                        <li><a class="dropdown-item text-center py-2" href="#">Voir toutes les notifications</a></li>
-                    </ul>
-                </div>
-                <div class="dropdown">
-                    <a class="btn btn-outline-dark d-flex align-items-center" href="#" role="button" id="userDropdown" data-bs-toggle="dropdown" aria-expanded="false">
-                        <div class="user-avatar me-2 bg-white">
-                            <i class="fas fa-user"></i>
-                        </div>
-                        <span class="d-none d-md-inline">Mon compte</span>
-                        <i class="fas fa-chevron-down ms-2 d-none d-md-inline"></i>
-                    </a>
-                    <ul class="dropdown-menu dropdown-menu-end shadow" aria-labelledby="userDropdown">
-                        <li><div class="dropdown-header bg-light py-3">Thomas Bernard</div></li>
-                        <li><a class="dropdown-item py-2" href="#"><i class="fas fa-user-circle me-2"></i>Mon profil</a></li>
-                        <li><a class="dropdown-item py-2" href="#"><i class="fas fa-cog me-2"></i>Paramètres</a></li>
-                        <li><a class="dropdown-item py-2" href="#"><i class="fas fa-question-circle me-2"></i>Aide</a></li>
-                        <li><hr class="dropdown-divider"></li>
-                        <li><a class="dropdown-item text-danger py-2" href="#"><i class="fas fa-sign-out-alt me-2"></i>Déconnexion</a></li>
-                    </ul>
-                </div>
-            </div>
-        </div>
+// Vérifier la connexion
+if (!isset($_SESSION['id_util'])) {
+    header("Location: ../login.php");
+    exit;
+}
+
+
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
+
+
+
+
+?>
 
         <div class="content-area">
-            <!-- Statistics Cards Row -->
-            <div class="row g-4 mb-4">
-                <div class="col-md-3">
-                    <div class="stats-card h-100">
-                        <div class="stats-card-content">
-                            <div class="stats-icon bg-primary">
-                                <i class="fas fa-book"></i>
-                            </div>
-                            <div class="stats-title">Total UE</div>
-                            <div class="stats-number">45</div>
-                            <div class="stats-trend">
-                                <i class="fas fa-plus"></i> +3 cette année
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="stats-card h-100">
-                        <div class="stats-card-content">
-                            <div class="stats-icon bg-success">
-                                <i class="fas fa-bookmark"></i>
-                            </div>
-                            <div class="stats-title">Total ECUE</div>
-                            <div class="stats-number">128</div>
-                            <div class="stats-trend">
-                                <i class="fas fa-arrow-up"></i> +12 nouvelles
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="stats-card h-100">
-                        <div class="stats-card-content">
-                            <div class="stats-icon bg-warning">
-                                <i class="fas fa-credit-card"></i>
-                            </div>
-                            <div class="stats-title">Total Crédits UE</div>
-                            <div class="stats-number">270</div>
-                            <div class="stats-trend">
-                                <i class="fas fa-calculator"></i> Système LMD
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="stats-card h-100">
-                        <div class="stats-card-content">
-                            <div class="stats-icon bg-info">
-                                <i class="fas fa-users"></i>
-                            </div>
-                            <div class="stats-title">Responsables UE</div>
-                            <div class="stats-number">32</div>
-                            <div class="stats-trend">
-                                <i class="fas fa-chalkboard-teacher"></i> Enseignants
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
             <!-- Main Content Card -->
             <div class="dashboard-card">
+                <!-- Formulaire ajout d'une UE -->
+                <div class="addUeForm">
+                    <div class="modal-dialog modal-lg">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title">
+                                    <i class="fas fa-chalkboard-teacher me-2"></i>Ajouter une UE
+                                </h5>
+                            </div>
+                            <div class="modal-body">
+                                <form id="addUeForm" method="POST" action="../pages/ecrans_admin/traitement_ue_ecue.php" onsubmit="return handleUeSubmit(event)">
+                                    <input type="hidden" name="mode_formulaire" value="ajout_ue">
+
+                                    <div class="row g-3">
+                                        <div class="col-md-6">
+                                            <label for="code_ue" class="form-label">Code UE <span class="text-danger">*</span></label>
+                                            <input type="text" class="form-control" id="code_ue" name="code_ue" required>
+                                        </div>
+
+                                        <div class="col-md-6">
+                                            <label for="lib_ue" class="form-label">Libellé UE <span class="text-danger">*</span></label>
+                                            <input type="text" class="form-control" id="lib_ue" name="lib_ue" required>
+                                        </div>
+
+                                        <div class="col-md-6">
+                                            <label for="credit_ue" class="form-label">Crédit UE</label>
+                                            <select class="form-select" id="credit_ue" name="credit_ue">
+                                                <option value="">--Sélectionnez le crédit--</option>
+                                                <?php for ($i = 1; $i <= 10; $i++): ?>
+                                                    <option value="<?= $i ?>"><?= $i ?></option>
+                                                <?php endfor; ?>
+                                            </select>
+                                        </div>
+
+                                        <div class="col-md-6">
+                                            <label for="id_ens_responsable" class="form-label">Responsable UE</label>
+                                            <select class="form-select" id="id_ens_responsable" name="id_ens_responsable">
+                                                <option value="">-- Sélectionnez un enseignant disponible --</option>
+                                                <?php
+                                                $stmt = $pdo->prepare("
+                                                    SELECT e.id_ens, CONCAT(e.prenoms_ens, ' ', e.nom_ens) AS nom_complet
+                                                    FROM enseignant e
+                                                    WHERE e.id_ens NOT IN (SELECT id_ens FROM ue WHERE id_ens IS NOT NULL)
+                                                ");
+                                                $stmt->execute();
+                                                foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $ens) {
+                                                    echo "<option value=\"{$ens['id_ens']}\">" . htmlspecialchars($ens['nom_complet']) . "</option>";
+                                                }
+                                                ?>
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    <div class="modal-footer">
+                                        <button type="submit" class="btn btn-primary mt-3">
+                                            <i class="fas fa-save me-2"></i>Ajouter l'UE
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Formulaire ajout d'une ECUE -->
+                <div class="addEcueForm">
+                    <div class="modal-dialog modal-lg">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title">
+                                    <i class="fas fa-book-open me-2"></i>Ajouter une ECUE
+                                </h5>
+                            </div>
+                            <div class="modal-body">
+                                <form id="addEcueForm" method="POST" action="../pages/ecrans_admin/traitement_ue_ecue.php" onsubmit="return handleEcueSubmit(event)">
+                                    <input type="hidden" name="mode_formulaire" value="ajout_ecue">
+
+                                    <div class="row g-3">
+                                        <div class="col-md-6">
+                                            <label for="id_ue" class="form-label">UE</label>
+                                            <select class="form-select" id="id_ue" name="id_ue" required>
+                                                <option value="">Sélectionner une UE</option>
+                                                <?php
+                                                $ue = $pdo->query("SELECT id_ue, lib_ue FROM ue");
+                                                while ($row = $ue->fetch(PDO::FETCH_ASSOC)) {
+                                                    echo "<option value=\"{$row['id_ue']}\">" . htmlspecialchars($row['lib_ue']) . "</option>";
+                                                }
+                                                ?>
+                                            </select>
+                                        </div>
+
+                                        <div class="col-md-6">
+                                            <label for="code_ecue" class="form-label">Code ECUE <span class="text-danger">*</span></label>
+                                            <input type="text" class="form-control" id="code_ecue" name="code_ecue" required>
+                                        </div>
+
+                                        <div class="col-md-6">
+                                            <label for="lib_ecue" class="form-label">Libellé ECUE <span class="text-danger">*</span></label>
+                                            <input type="text" class="form-control" id="lib_ecue" name="lib_ecue" required>
+                                        </div>
+
+                                        <div class="col-md-6">
+                                            <label for="credit_ecue" class="form-label">Crédit ECUE</label>
+                                            <select class="form-select" id="credit_ecue" name="credit_ecue">
+                                                <option value="">--Sélectionnez le crédit--</option>
+                                                <?php for ($i = 1; $i <= 5; $i++): ?>
+                                                    <option value="<?= $i ?>"><?= $i ?></option>
+                                                <?php endfor; ?>
+                                            </select>
+                                        </div>
+
+                                        <div class="col-md-6">
+                                            <label for="semestre" class="form-label">Semestre <span class="text-danger">*</span></label>
+                                            <input type="text" class="form-control" id="semestre" name="semestre" required placeholder="Ex: S1">
+                                        </div>
+
+                                        <div class="col-md-6">
+                                            <label for="annee_aca" class="form-label">Année académique <span class="text-danger">*</span></label>
+                                            <input type="text" class="form-control" id="annee_aca" name="annee_aca" required placeholder="Ex: 2024-2025">
+                                        </div>
+
+                                        <div class="col-md-6">
+                                            <label for="spe_ens" class="form-label">Spécialité <span class="text-danger">*</span></label>
+                                            <input type="text" class="form-control" id="spe_ens" name="spe_ens" required placeholder="Ex: Mathématique, Informatique...">
+                                        </div>
+                                    </div>
+
+                                    <div class="modal-footer">
+                                        <button type="submit" class="btn btn-primary mt-3">
+                                            <i class="fas fa-save me-2"></i>Ajouter l'ECUE
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+
+
+
                 <div class="d-flex justify-content-between align-items-center mb-4">
                     <div>
                         <h5 class="mb-1"><i class="fas fa-graduation-cap me-2"></i>Unités d'Enseignement et ECUE</h5>

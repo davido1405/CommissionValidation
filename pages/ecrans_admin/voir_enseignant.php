@@ -1,10 +1,9 @@
 <?php
 require_once(__DIR__ . '/../../config/db.php');
 
-// Vérifie si JSON attendu (AJAX)
 $isJson = isset($_GET['json']) && $_GET['json'] == '1';
 
-// Vérifie ID
+// Vérifie l'ID
 if (!isset($_GET['id']) || !is_numeric($_GET['id'])) {
     if ($isJson) {
         header('Content-Type: application/json');
@@ -17,7 +16,14 @@ if (!isset($_GET['id']) || !is_numeric($_GET['id'])) {
 
 $id_ens = (int) $_GET['id'];
 
-// Récupère infos principales de l'enseignant
+// 🔍 Fonction utilitaire pour récupérer une seule valeur
+function fetchColumnById($pdo, $sql, $id) {
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute([$id]);
+    return $stmt->fetchColumn() ?: null;
+}
+
+// 🔹 Récupère les infos de l'enseignant
 $stmt = $pdo->prepare("SELECT * FROM enseignant WHERE id_ens = ?");
 $stmt->execute([$id_ens]);
 $enseignant = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -32,62 +38,47 @@ if (!$enseignant) {
     exit;
 }
 
-// --- Si JSON : retour pour formulaire de modification ---
 if ($isJson) {
-    // Charger id_grade
-    $stmt = $pdo->prepare("SELECT id_grade FROM avoir WHERE id_ens = ? ORDER BY dte_grd DESC LIMIT 1");
-    $stmt->execute([$id_ens]);
-    $enseignant['id_grade'] = $stmt->fetchColumn();
+    // 🔒 Facultatif : Ne pas renvoyer le mot de passe si tu veux plus de sécurité
+    // Supprime la ligne suivante si tu ne veux pas le transmettre au JS :
+    // unset($enseignant['mdp_ens']);
 
-    // Charger id_fonct
-    $stmt = $pdo->prepare("SELECT id_fonct FROM occuper WHERE id_ens = ? ORDER BY dte_occup DESC LIMIT 1");
-    $stmt->execute([$id_ens]);
-    $enseignant['id_fonct'] = $stmt->fetchColumn();
-
-    // Charger spécialité texte (lib_spe)
-    $stmt = $pdo->prepare("
+    // Ajout des données secondaires
+    $enseignant['id_grade'] = fetchColumnById($pdo, "SELECT id_grade FROM avoir WHERE id_ens = ? ORDER BY dte_grd DESC LIMIT 1", $id_ens);
+    $enseignant['id_fonct'] = fetchColumnById($pdo, "SELECT id_fonct FROM occuper WHERE id_ens = ? ORDER BY dte_occup DESC LIMIT 1", $id_ens);
+    $enseignant['lib_spe']  = fetchColumnById($pdo, "
         SELECT s.lib_spe FROM enseigner e
         JOIN specialite s ON e.id_spe = s.id_spe
         WHERE e.id_ens = ?
-        ORDER BY e.id_spe DESC LIMIT 1
-    ");
-    $stmt->execute([$id_ens]);
-    $enseignant['lib_spe'] = $stmt->fetchColumn();
+        ORDER BY e.id_spe DESC LIMIT 1", $id_ens);
 
-    // Envoi JSON
     header('Content-Type: application/json');
     echo json_encode($enseignant);
     exit;
 }
 
-// --- Sinon : mode HTML pour affichage dans une modale ---
+// --- Mode HTML (vue modale) ---
 
-// Spécialités
-$stmt = $pdo->prepare("
+function fetchColumnList($pdo, $sql, $id) {
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute([$id]);
+    return $stmt->fetchAll(PDO::FETCH_COLUMN);
+}
+
+$specialites = fetchColumnList($pdo, "
     SELECT s.lib_spe FROM enseigner e
     JOIN specialite s ON e.id_spe = s.id_spe
-    WHERE e.id_ens = ?
-");
-$stmt->execute([$id_ens]);
-$specialites = $stmt->fetchAll(PDO::FETCH_COLUMN);
+    WHERE e.id_ens = ?", $id_ens);
 
-// Grades
-$stmt = $pdo->prepare("
+$grades = fetchColumnList($pdo, "
     SELECT g.nom_grade FROM avoir a
     JOIN grade g ON a.id_grade = g.id_grade
-    WHERE a.id_ens = ?
-");
-$stmt->execute([$id_ens]);
-$grades = $stmt->fetchAll(PDO::FETCH_COLUMN);
+    WHERE a.id_ens = ?", $id_ens);
 
-// Fonctions
-$stmt = $pdo->prepare("
+$fonctions = fetchColumnList($pdo, "
     SELECT f.nom_fonct FROM occuper o
     JOIN fonction f ON o.id_fonct = f.id_fonct
-    WHERE o.id_ens = ?
-");
-$stmt->execute([$id_ens]);
-$fonctions = $stmt->fetchAll(PDO::FETCH_COLUMN);
+    WHERE o.id_ens = ?", $id_ens);
 ?>
 
 <div class="row">
