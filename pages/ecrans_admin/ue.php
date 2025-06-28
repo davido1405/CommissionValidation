@@ -17,7 +17,6 @@ error_reporting(E_ALL);
 
 
 ?>
-
         <div class="content-area">
             <!-- Main Content Card -->
             <div class="dashboard-card">
@@ -52,6 +51,18 @@ error_reporting(E_ALL);
                                                 <?php for ($i = 1; $i <= 10; $i++): ?>
                                                     <option value="<?= $i ?>"><?= $i ?></option>
                                                 <?php endfor; ?>
+                                            </select>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label for="credit_ue" class="form-label">NIVEAU</label>
+                                            <select class="form-select" id="credit_ue" name="credit_ue">
+                                                <option value="">--Sélectionnez le niveau--</option>
+                                                <?php
+                                                    $niveau = $pdo->query("SELECT id_niv_etu, lib_niv_etu FROM niveau_etude");
+                                                    while ($row = $niveau->fetch(PDO::FETCH_ASSOC)) {
+                                                        echo "<option value=\"{$row['id_niv_etu']}\">" . htmlspecialchars($row['lib_niv_etu']) . "</option>";
+                                                    }
+                                                ?>
                                             </select>
                                         </div>
 
@@ -171,19 +182,6 @@ error_reporting(E_ALL);
                         <button class="btn btn-outline-secondary" onclick="exportCurriculum()">
                             <i class="fas fa-file-export me-2"></i>Exporter Programme
                         </button>
-                        <div class="btn-group">
-                            <button class="btn btn-primary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                <i class="fas fa-plus me-2"></i>Ajouter
-                            </button>
-                            <ul class="dropdown-menu">
-                                <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#addUEModal">
-                                    <i class="fas fa-book me-2"></i>Nouvelle UE
-                                </a></li>
-                                <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#addECUEModal">
-                                    <i class="fas fa-bookmark me-2"></i>Nouvelle ECUE
-                                </a></li>
-                            </ul>
-                        </div>
                     </div>
                 </div>
 
@@ -197,11 +195,6 @@ error_reporting(E_ALL);
                     <li class="nav-item" role="presentation">
                         <button class="nav-link" id="ecue-tab" data-bs-toggle="tab" data-bs-target="#ecue-tab-pane" type="button" role="tab" aria-controls="ecue-tab-pane" aria-selected="false">
                             <i class="fas fa-bookmark me-2"></i>Éléments Constitutifs (ECUE)
-                        </button>
-                    </li>
-                    <li class="nav-item" role="presentation">
-                        <button class="nav-link" id="curriculum-tab" data-bs-toggle="tab" data-bs-target="#curriculum-tab-pane" type="button" role="tab" aria-controls="curriculum-tab-pane" aria-selected="false">
-                            <i class="fas fa-sitemap me-2"></i>Structure Curriculaire
                         </button>
                     </li>
                 </ul>
@@ -222,11 +215,12 @@ error_reporting(E_ALL);
                                     <div class="col-md-3">
                                         <select class="custom-select" id="filterLevel" onchange="filterUE()">
                                             <option value="">Tous les niveaux</option>
-                                            <option value="L1">Licence 1</option>
-                                            <option value="L2">Licence 2</option>
-                                            <option value="L3">Licence 3</option>
-                                            <option value="M1">Master 1</option>
-                                            <option value="M2">Master 2</option>
+                                            <?php
+                                                $niveau = $pdo->query("SELECT id_niv_etu, lib_niv_etu FROM niveau_etude");
+                                                while ($row = $niveau->fetch(PDO::FETCH_ASSOC)) {
+                                                    echo "<option value=\"{$row['id_niv_etu']}\">" . htmlspecialchars($row['lib_niv_etu']) . "</option>";
+                                                }
+                                            ?>
                                         </select>
                                     </div>
                                     <div class="col-md-3">
@@ -272,103 +266,66 @@ error_reporting(E_ALL);
                                     </tr>
                                 </thead>
                                 <tbody>
+                                    <?php
+                                    $stmt = $pdo->prepare("
+                                        SELECT 
+                                            ue.id_ue,
+                                            ue.code_ue,
+                                            ue.lib_ue,
+                                            ue.credit_ue,
+                                            ue.id_ens,
+                                            ue.id_niv_etu,
+                                            ue.semestre,
+                                            CONCAT(e.prenoms_ens, ' ', e.nom_ens) AS responsable,
+                                            n.lib_niv_etu,              -- Ajout ici pour récupérer le libellé du niveau
+                                            COUNT(ec.id_ecue) AS nb_ecue
+                                        FROM ue
+                                        LEFT JOIN enseignant e ON ue.id_ens = e.id_ens
+                                        LEFT JOIN ecue ec ON ue.id_ue = ec.id_ue
+                                        LEFT JOIN niveau_etude n ON ue.id_niv_etu = n.id_niv_etu
+                                        GROUP BY ue.id_ue
+                                        ORDER BY ue.id_ue ASC
+                                    ");
+                                    $stmt->execute();
+                                    $ues = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+                                    foreach ($ues as $ue):
+                                    ?>
                                     <tr>
-                                        <td class="fw-bold">UE001</td>
+                                        <td class="fw-bold"><?= htmlspecialchars($ue['code_ue']) ?></td>
                                         <td>
                                             <div>
-                                                <div class="fw-bold">Programmation Orientée Objet</div>
-                                                <small class="text-muted">Concepts avancés de la POO</small>
+                                                <div class="fw-bold"><?= htmlspecialchars($ue['lib_ue']) ?></div>
+                                                <small class="text-muted">Description optionnelle ici</small>
                                             </div>
                                         </td>
-                                        <td><span class="badge bg-primary">6 crédits</span></td>
-                                        <td><span class="badge bg-info">Licence 2</span></td>
-                                        <td><span class="badge bg-secondary">S3</span></td>
-                                        <td>Dr. Diabaté Sekou</td>
+                                        <td><span class="badge bg-primary"><?= (int)$ue['credit_ue'] ?> crédits</span></td>
+                                        <td><span class="badge bg-info"><?= $ue['lib_niv_etu'] ?? 'N/A' ?></span></td> <!-- Si tu as une colonne ou jointure niveau -->
+                                        <td><span class="badge bg-secondary"><?= htmlspecialchars($ue['semestre'] ?? 'N/A') ?></span></td>
+                                        <td><?= htmlspecialchars($ue['responsable'] ?? 'Non assigné') ?></td>
                                         <td>
-                                            <span class="badge bg-success">3 ECUE</span>
+                                            <span class="badge bg-success"><?= (int)$ue['nb_ecue'] ?> ECUE</span>
                                         </td>
                                         <td>
                                             <div class="btn-group" role="group">
-                                                <button class="btn btn-sm btn-outline-primary" title="Voir" onclick="viewUE(1)">
+                                                <button class="btn btn-sm btn-outline-primary" title="Voir" onclick="viewUE(<?= $ue['id_ue'] ?>)">
                                                     <i class="fas fa-eye"></i>
                                                 </button>
-                                                <button class="btn btn-sm btn-outline-warning" title="Modifier" onclick="editUE(1)">
+                                                <button class="btn btn-sm btn-outline-warning" title="Modifier" onclick="editUE(<?= $ue['id_ue'] ?>)">
                                                     <i class="fas fa-edit"></i>
                                                 </button>
-                                                <button class="btn btn-sm btn-outline-info" title="Gérer ECUE" onclick="manageECUE(1)">
+                                                <button class="btn btn-sm btn-outline-info" title="Gérer ECUE" onclick="manageECUE(<?= $ue['id_ue'] ?>)">
                                                     <i class="fas fa-list"></i>
                                                 </button>
-                                                <button class="btn btn-sm btn-outline-danger" title="Supprimer" onclick="deleteUE(1)">
+                                                <button class="btn btn-sm btn-outline-danger" title="Supprimer" onclick="deleteUE(<?= $ue['id_ue'] ?>)">
                                                     <i class="fas fa-trash"></i>
                                                 </button>
                                             </div>
                                         </td>
                                     </tr>
-                                    <tr>
-                                        <td class="fw-bold">UE002</td>
-                                        <td>
-                                            <div>
-                                                <div class="fw-bold">Base de Données Avancées</div>
-                                                <small class="text-muted">Conception et optimisation BD</small>
-                                            </div>
-                                        </td>
-                                        <td><span class="badge bg-primary">4 crédits</span></td>
-                                        <td><span class="badge bg-warning">Master 1</span></td>
-                                        <td><span class="badge bg-secondary">S1</span></td>
-                                        <td>Prof. Kouamé Akissi</td>
-                                        <td>
-                                            <span class="badge bg-success">2 ECUE</span>
-                                        </td>
-                                        <td>
-                                            <div class="btn-group" role="group">
-                                                <button class="btn btn-sm btn-outline-primary" title="Voir" onclick="viewUE(2)">
-                                                    <i class="fas fa-eye"></i>
-                                                </button>
-                                                <button class="btn btn-sm btn-outline-warning" title="Modifier" onclick="editUE(2)">
-                                                    <i class="fas fa-edit"></i>
-                                                </button>
-                                                <button class="btn btn-sm btn-outline-info" title="Gérer ECUE" onclick="manageECUE(2)">
-                                                    <i class="fas fa-list"></i>
-                                                </button>
-                                                <button class="btn btn-sm btn-outline-danger" title="Supprimer" onclick="deleteUE(2)">
-                                                    <i class="fas fa-trash"></i>
-                                                </button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                    <tr>
-                                        <td class="fw-bold">UE003</td>
-                                        <td>
-                                            <div>
-                                                <div class="fw-bold">Mathématiques Appliquées</div>
-                                                <small class="text-muted">Algèbre et analyse pour l'informatique</small>
-                                            </div>
-                                        </td>
-                                        <td><span class="badge bg-primary">5 crédits</span></td>
-                                        <td><span class="badge bg-info">Licence 1</span></td>
-                                        <td><span class="badge bg-secondary">S1</span></td>
-                                        <td>Dr. Traoré Fatou</td>
-                                        <td>
-                                            <span class="badge bg-success">4 ECUE</span>
-                                        </td>
-                                        <td>
-                                            <div class="btn-group" role="group">
-                                                <button class="btn btn-sm btn-outline-primary" title="Voir" onclick="viewUE(3)">
-                                                    <i class="fas fa-eye"></i>
-                                                </button>
-                                                <button class="btn btn-sm btn-outline-warning" title="Modifier" onclick="editUE(3)">
-                                                    <i class="fas fa-edit"></i>
-                                                </button>
-                                                <button class="btn btn-sm btn-outline-info" title="Gérer ECUE" onclick="manageECUE(3)">
-                                                    <i class="fas fa-list"></i>
-                                                </button>
-                                                <button class="btn btn-sm btn-outline-danger" title="Supprimer" onclick="deleteUE(3)">
-                                                    <i class="fas fa-trash"></i>
-                                                </button>
-                                            </div>
-                                        </td>
-                                    </tr>
+                                    <?php endforeach; ?>
                                 </tbody>
+
                             </table>
                         </div>
                     </div>
@@ -388,17 +345,24 @@ error_reporting(E_ALL);
                                     <div class="col-md-4">
                                         <select class="custom-select" id="filterUEParent" onchange="filterECUE()">
                                             <option value="">Toutes les UE</option>
-                                            <option value="UE001">UE001 - Programmation Orientée Objet</option>
-                                            <option value="UE002">UE002 - Base de Données Avancées</option>
-                                            <option value="UE003">UE003 - Mathématiques Appliquées</option>
+                                            <?php
+                                                $ue = $pdo->query("SELECT * FROM ue");
+                                                while ($row = $ue->fetch(PDO::FETCH_ASSOC)) {
+                                                    echo "<option value=\"{$row['code_ue']}\">" . htmlspecialchars($row['lib_ue']) . "</option>";
+                                                }
+                                            ?>
+                                            
                                         </select>
                                     </div>
                                     <div class="col-md-4">
                                         <select class="custom-select" id="filterECUECredits" onchange="filterECUE()">
                                             <option value="">Tous les crédits</option>
-                                            <option value="1">1 crédit</option>
-                                            <option value="2">2 crédits</option>
-                                            <option value="3">3 crédits</option>
+                                            <?php
+                                                $credit = $pdo->query("SELECT * FROM ue");
+                                                while ($row = $credit->fetch(PDO::FETCH_ASSOC)) {
+                                                    echo "<option value=\"{$row['credit_ue']}\"> Credit " . htmlspecialchars($row['credit_ue']) . "</option>";
+                                                }
+                                            ?>
                                         </select>
                                     </div>
                                     <div class="col-md-4">
@@ -419,345 +383,111 @@ error_reporting(E_ALL);
                                         <th>Intitulé</th>
                                         <th>Crédits</th>
                                         <th>UE Parente</th>
-                                        <th>Type</th>
-                                        <th>Volume horaire</th>
+                                        <th>Semestre</th>
+                                        <th>Enseignant</th>
                                         <th>Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    <tr>
-                                        <td class="fw-bold">ECUE001</td>
-                                        <td>
-                                            <div>
-                                                <div class="fw-bold">Cours POO</div>
-                                                <small class="text-muted">Théorie et concepts</small>
-                                            </div>
-                                        </td>
-                                        <td><span class="badge bg-info">2 crédits</span></td>
-                                        <td><span class="badge bg-primary">UE001</span></td>
-                                        <td><span class="badge bg-success">Cours</span></td>
-                                        <td>30h</td>
-                                        <td>
-                                            <div class="btn-group" role="group">
-                                                <button class="btn btn-sm btn-outline-primary" title="Voir" onclick="viewECUE(1)">
-                                                    <i class="fas fa-eye"></i>
-                                                </button>
-                                                <button class="btn btn-sm btn-outline-warning" title="Modifier" onclick="editECUE(1)">
-                                                    <i class="fas fa-edit"></i>
-                                                </button>
-                                                <button class="btn btn-sm btn-outline-danger" title="Supprimer" onclick="deleteECUE(1)">
-                                                    <i class="fas fa-trash"></i>
-                                                </button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                    <tr>
-                                        <td class="fw-bold">ECUE002</td>
-                                        <td>
-                                            <div>
-                                                <div class="fw-bold">TP POO</div>
-                                                <small class="text-muted">Travaux pratiques</small>
-                                            </div>
-                                        </td>
-                                        <td><span class="badge bg-info">2 crédits</span></td>
-                                        <td><span class="badge bg-primary">UE001</span></td>
-                                        <td><span class="badge bg-warning text-dark">TP</span></td>
-                                        <td>45h</td>
-                                        <td>
-                                            <div class="btn-group" role="group">
-                                                <button class="btn btn-sm btn-outline-primary" title="Voir" onclick="viewECUE(2)">
-                                                    <i class="fas fa-eye"></i>
-                                                </button>
-                                                <button class="btn btn-sm btn-outline-warning" title="Modifier" onclick="editECUE(2)">
-                                                    <i class="fas fa-edit"></i>
-                                                </button>
-                                                <button class="btn btn-sm btn-outline-danger" title="Supprimer" onclick="deleteECUE(2)">
-                                                    <i class="fas fa-trash"></i>
-                                                </button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                    <tr>
-                                        <td class="fw-bold">ECUE003</td>
-                                        <td>
-                                            <div>
-                                                <div class="fw-bold">Projet POO</div>
-                                                <small class="text-muted">Projet d'application</small>
-                                            </div>
-                                        </td>
-                                        <td><span class="badge bg-info">2 crédits</span></td>
-                                        <td><span class="badge bg-primary">UE001</span></td>
-                                        <td><span class="badge bg-danger">Projet</span></td>
-                                        <td>40h</td>
-                                        <td>
-                                            <div class="btn-group" role="group">
-                                                <button class="btn btn-sm btn-outline-primary" title="Voir" onclick="viewECUE(3)">
-                                                    <i class="fas fa-eye"></i>
-                                                </button>
-                                                <button class="btn btn-sm btn-outline-warning" title="Modifier" onclick="editECUE(3)">
-                                                    <i class="fas fa-edit"></i>
-                                                </button>
-                                                <button class="btn btn-sm btn-outline-danger" title="Supprimer" onclick="deleteECUE(3)">
-                                                    <i class="fas fa-trash"></i>
-                                                </button>
-                                            </div>
-                                        </td>
-                                    </tr>
+                                    <?php
+                                        $stmt = $pdo->prepare("
+                                            SELECT 
+                                                ec.id_ecue,
+                                                ec.code_ecue,
+                                                ec.lib_ecue,
+                                                ec.semestre AS semestre_ecue,
+                                                ec.id_ac,
+
+                                                ue.id_ue,
+                                                ue.code_ue,
+                                                ue.lib_ue,
+                                                ue.credit_ue,
+                                                ue.semestre AS semestre_ue,
+                                                ue.id_niv_etu,
+
+                                                CONCAT(e.prenoms_ens, ' ', e.nom_ens) AS enseignant,
+                                                n.lib_niv_etu
+
+                                            FROM ecue ec
+                                            LEFT JOIN ue ON ec.id_ue = ue.id_ue
+                                            LEFT JOIN niveau_etude n ON ue.id_niv_etu = n.id_niv_etu
+                                            LEFT JOIN enseigner_ecue ee ON ec.id_ecue = ee.id_ecue
+                                            LEFT JOIN enseignant e ON ee.id_ens = e.id_ens
+                                            ORDER BY ec.id_ecue ASC, ee.date_affectation DESC
+                                        ");
+                                        $stmt->execute();
+                                        $ecues = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+
+                                    ?>
+                                    <?php
+                                        // Regrouper les ECUEs par ID pour éviter les doublons si plusieurs enseignants
+                                        $groupedEcues = [];
+                                        foreach ($ecues as $row) {
+                                            $id = $row['id_ecue'];
+                                            if (!isset($groupedEcues[$id])) {
+                                                $groupedEcues[$id] = $row;
+                                                $groupedEcues[$id]['enseignants'] = [];
+                                            }
+                                            if (!empty($row['enseignant'])) {
+                                                $groupedEcues[$id]['enseignants'][] = $row['enseignant'];
+                                            }
+                                        }
+
+                                        foreach ($groupedEcues as $ecue):
+                                        ?>
+                                        <tr>
+                                            <td class="fw-bold"><?= htmlspecialchars($ecue['code_ecue'] ?? '') ?></td>
+                                            <td>
+                                                <div>
+                                                    <div class="fw-bold"><?= htmlspecialchars($ecue['lib_ecue'] ?? '') ?></div>
+                                                    <small class="text-muted">
+                                                        <?= htmlspecialchars($ecue['lib_ue'] ?? '') ?> – <?= htmlspecialchars($ecue['lib_niv_etu'] ?? '') ?>
+                                                    </small>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <span class="badge bg-info">
+                                                    <?= htmlspecialchars($ecue['credit_ue'] ?? '0') ?> crédits
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <span class="badge bg-primary"><?= htmlspecialchars($ecue['code_ue'] ?? '') ?></span>
+                                            </td>
+                                            <td>
+                                                <span class="badge bg-success">
+                                                    Semestre <?= htmlspecialchars($ecue['semestre_ecue'] ?? '-') ?>
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <?php
+                                                if (!empty($ecue['enseignants'])) {
+                                                    echo implode(', ', array_map('htmlspecialchars', $ecue['enseignants']));
+                                                } else {
+                                                    echo '<span class="text-muted">Non assigné</span>';
+                                                }
+                                                ?>
+                                            </td>
+                                            <td>
+                                                <div class="btn-group" role="group">
+                                                    <button class="btn btn-sm btn-outline-primary" title="Voir" onclick="viewECUE(<?= (int)$ecue['id_ecue'] ?>)">
+                                                        <i class="fas fa-eye"></i>
+                                                    </button>
+                                                    <button class="btn btn-sm btn-outline-warning" title="Modifier" onclick="editECUE(<?= (int)$ecue['id_ecue'] ?>)">
+                                                        <i class="fas fa-edit"></i>
+                                                    </button>
+                                                    <button class="btn btn-sm btn-outline-danger" title="Supprimer" onclick="deleteECUE(<?= (int)$ecue['id_ecue'] ?>)">
+                                                        <i class="fas fa-trash"></i>
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        <?php endforeach; ?>
+
                                 </tbody>
                             </table>
                         </div>
                     </div>
-
-                    <!-- Curriculum Tab -->
-                    <div class="tab-pane fade" id="curriculum-tab-pane" role="tabpanel" aria-labelledby="curriculum-tab" tabindex="0">
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="card">
-                                    <div class="card-header">
-                                        <h6><i class="fas fa-graduation-cap me-2"></i>Structure par Niveau</h6>
-                                    </div>
-                                    <div class="card-body">
-                                        <div class="accordion" id="levelAccordion">
-                                            <div class="accordion-item">
-                                                <h2 class="accordion-header" id="headingL1">
-                                                    <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapseL1">
-                                                        Licence 1 (30 crédits)
-                                                    </button>
-                                                </h2>
-                                                <div id="collapseL1" class="accordion-collapse collapse show" data-bs-parent="#levelAccordion">
-                                                    <div class="accordion-body">
-                                                        <ul class="list-group list-group-flush">
-                                                            <li class="list-group-item d-flex justify-content-between">
-                                                                <span>Mathématiques Appliquées</span>
-                                                                <span class="badge bg-primary">5 crédits</span>
-                                                            </li>
-                                                            <li class="list-group-item d-flex justify-content-between">
-                                                                <span>Introduction à l'Informatique</span>
-                                                                <span class="badge bg-primary">6 crédits</span>
-                                                            </li>
-                                                            <li class="list-group-item d-flex justify-content-between">
-                                                                <span>Algorithmique</span>
-                                                                <span class="badge bg-primary">4 crédits</span>
-                                                            </li>
-                                                        </ul>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div class="accordion-item">
-                                                <h2 class="accordion-header" id="headingL2">
-                                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseL2">
-                                                        Licence 2 (30 crédits)
-                                                    </button>
-                                                </h2>
-                                                <div id="collapseL2" class="accordion-collapse collapse" data-bs-parent="#levelAccordion">
-                                                    <div class="accordion-body">
-                                                        <ul class="list-group list-group-flush">
-                                                            <li class="list-group-item d-flex justify-content-between">
-                                                                <span>Programmation Orientée Objet</span>
-                                                                <span class="badge bg-primary">6 crédits</span>
-                                                            </li>
-                                                            <li class="list-group-item d-flex justify-content-between">
-                                                                <span>Structures de Données</span>
-                                                                <span class="badge bg-primary">4 crédits</span>
-                                                            </li>
-                                                            <li class="list-group-item d-flex justify-content-between">
-                                                                <span>Systèmes d'Exploitation</span>
-                                                                <span class="badge bg-primary">5 crédits</span>
-                                                            </li>
-                                                        </ul>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="card">
-                                    <div class="card-header">
-                                        <h6><i class="fas fa-chart-pie me-2"></i>Répartition des Crédits</h6>
-                                    </div>
-                                    <div class="card-body">
-                                        <canvas id="creditsChart" width="400" height="200"></canvas>
-                                        <div class="mt-3">
-                                            <div class="row text-center">
-                                                <div class="col-4">
-                                                    <h5 class="text-primary">180</h5>
-                                                    <small>Licence</small>
-                                                </div>
-                                                <div class="col-4">
-                                                    <h5 class="text-success">120</h5>
-                                                    <small>Master</small>
-                                                </div>
-                                                <div class="col-4">
-                                                    <h5 class="text-info">300</h5>
-                                                    <small>Total</small>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Add UE Modal -->
-    <div class="modal fade" id="addUEModal" tabindex="-1" aria-labelledby="addUEModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-lg">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="addUEModalLabel">
-                        <i class="fas fa-book me-2"></i>Ajouter une nouvelle UE
-                    </h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <form id="addUEForm">
-                        <div class="row g-3">
-                            <div class="col-md-6">
-                                <label for="ueCode" class="form-label">Code UE <span class="text-danger">*</span></label>
-                                <input type="text" class="form-control" id="ueCode" name="code_ue" required>
-                            </div>
-                            <div class="col-md-6">
-                                <label for="ueCredits" class="form-label">Crédits <span class="text-danger">*</span></label>
-                                <select class="form-select" id="ueCredits" name="credit_UE" required>
-                                    <option value="">Choisir...</option>
-                                    <option value="3">3 crédits</option>
-                                    <option value="4">4 crédits</option>
-                                    <option value="5">5 crédits</option>
-                                    <option value="6">6 crédits</option>
-                                </select>
-                            </div>
-                            <div class="col-12">
-                                <label for="ueTitle" class="form-label">Intitulé UE <span class="text-danger">*</span></label>
-                                <input type="text" class="form-control" id="ueTitle" name="lib_UE" required>
-                            </div>
-                            <div class="col-md-6">
-                                <label for="ueLevel" class="form-label">Niveau <span class="text-danger">*</span></label>
-                                <select class="form-select" id="ueLevel" name="niveau" required>
-                                    <option value="">Choisir...</option>
-                                    <option value="L1">Licence 1</option>
-                                    <option value="L2">Licence 2</option>
-                                    <option value="L3">Licence 3</option>
-                                    <option value="M1">Master 1</option>
-                                    <option value="M2">Master 2</option>
-                                </select>
-                            </div>
-                            <div class="col-md-6">
-                                <label for="ueSemester" class="form-label">Semestre <span class="text-danger">*</span></label>
-                                <select class="form-select" id="ueSemester" name="semestre" required>
-                                    <option value="">Choisir...</option>
-                                    <option value="S1">Semestre 1</option>
-                                    <option value="S2">Semestre 2</option>
-                                    <option value="S3">Semestre 3</option>
-                                    <option value="S4">Semestre 4</option>
-                                </select>
-                            </div>
-                            <div class="col-12">
-                                <label for="ueResponsible" class="form-label">Responsable UE</label>
-                                <select class="form-select" id="ueResponsible" name="id_responsable">
-                                    <option value="">Choisir...</option>
-                                    <option value="1">Dr. Diabaté Sekou</option>
-                                    <option value="2">Prof. Kouamé Akissi</option>
-                                    <option value="3">Dr. Traoré Fatou</option>
-                                </select>
-                            </div>
-                            <div class="col-12">
-                                <label for="ueDescription" class="form-label">Description</label>
-                                <textarea class="form-control" id="ueDescription" name="description" rows="3"></textarea>
-                            </div>
-                        </div>
-                    </form>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
-                    <button type="button" class="btn btn-primary" onclick="saveUE()">
-                        <i class="fas fa-save me-2"></i>Enregistrer
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Add ECUE Modal -->
-    <div class="modal fade" id="addECUEModal" tabindex="-1" aria-labelledby="addECUEModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-lg">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="addECUEModalLabel">
-                        <i class="fas fa-bookmark me-2"></i>Ajouter une nouvelle ECUE
-                    </h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <form id="addECUEForm">
-                        <div class="row g-3">
-                            <div class="col-md-6">
-                                <label for="ecueCode" class="form-label">Code ECUE <span class="text-danger">*</span></label>
-                                <input type="text" class="form-control" id="ecueCode" name="code_ecue" required>
-                            </div>
-                            <div class="col-md-6">
-                                <label for="ecueCredits" class="form-label">Crédits <span class="text-danger">*</span></label>
-                                <select class="form-select" id="ecueCredits" name="credit_ECUE" required>
-                                    <option value="">Choisir...</option>
-                                    <option value="1">1 crédit</option>
-                                    <option value="2">2 crédits</option>
-                                    <option value="3">3 crédits</option>
-                                </select>
-                            </div>
-                            <div class="col-12">
-                                <label for="ecueTitle" class="form-label">Intitulé ECUE <span class="text-danger">*</span></label>
-                                <input type="text" class="form-control" id="ecueTitle" name="lib_ECUE" required>
-                            </div>
-                            <div class="col-md-6">
-                                <label for="ecueParentUE" class="form-label">UE Parente <span class="text-danger">*</span></label>
-                                <select class="form-select" id="ecueParentUE" name="id_UE" required>
-                                    <option value="">Choisir...</option>
-                                    <option value="1">UE001 - Programmation Orientée Objet</option>
-                                    <option value="2">UE002 - Base de Données Avancées</option>
-                                    <option value="3">UE003 - Mathématiques Appliquées</option>
-                                </select>
-                            </div>
-                            <div class="col-md-6">
-                                <label for="ecueType" class="form-label">Type d'enseignement <span class="text-danger">*</span></label>
-                                <select class="form-select" id="ecueType" name="type_enseignement" required>
-                                    <option value="">Choisir...</option>
-                                    <option value="Cours">Cours</option>
-                                    <option value="TD">Travaux Dirigés</option>
-                                    <option value="TP">Travaux Pratiques</option>
-                                    <option value="Projet">Projet</option>
-                                    <option value="Stage">Stage</option>
-                                </select>
-                            </div>
-                            <div class="col-md-6">
-                                <label for="ecueHours" class="form-label">Volume horaire</label>
-                                <input type="number" class="form-control" id="ecueHours" name="volume_horaire" placeholder="Heures">
-                            </div>
-                            <div class="col-md-6">
-                                <label for="ecueTeacher" class="form-label">Enseignant responsable</label>
-                                <select class="form-select" id="ecueTeacher" name="id_enseignant">
-                                    <option value="">Choisir...</option>
-                                    <option value="1">Dr. Diabaté Sekou</option>
-                                    <option value="2">Prof. Kouamé Akissi</option>
-                                    <option value="3">Dr. Traoré Fatou</option>
-                                </select>
-                            </div>
-                            <div class="col-12">
-                                <label for="ecueDescription" class="form-label">Description</label>
-                                <textarea class="form-control" id="ecueDescription" name="description" rows="3"></textarea>
-                            </div>
-                        </div>
-                    </form>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
-                    <button type="button" class="btn btn-primary" onclick="saveECUE()">
-                        <i class="fas fa-save me-2"></i>Enregistrer
-                    </button>
                 </div>
             </div>
         </div>
