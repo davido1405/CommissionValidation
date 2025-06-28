@@ -13,9 +13,6 @@ ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
 
-
-
-
 ?>
         <div class="content-area">
             <!-- Main Content Card -->
@@ -319,9 +316,6 @@ error_reporting(E_ALL);
                                                 <button class="btn btn-sm btn-outline-warning" title="Modifier" onclick="editUE(<?= $ue['id_ue'] ?>)">
                                                     <i class="fas fa-edit"></i>
                                                 </button>
-                                                <button class="btn btn-sm btn-outline-info" title="Gérer ECUE" onclick="manageECUE(<?= $ue['id_ue'] ?>)">
-                                                    <i class="fas fa-list"></i>
-                                                </button>
                                                 <button class="btn btn-sm btn-outline-danger" title="Supprimer" onclick="deleteUE(<?= $ue['id_ue'] ?>)">
                                                     <i class="fas fa-trash"></i>
                                                 </button>
@@ -400,7 +394,6 @@ error_reporting(E_ALL);
                                                 ec.id_ecue,
                                                 ec.code_ecue,
                                                 ec.lib_ecue,
-                                                ec.semestre AS semestre_ecue,
                                                 ec.id_ac,
 
                                                 ue.id_ue,
@@ -461,7 +454,7 @@ error_reporting(E_ALL);
                                             </td>
                                             <td>
                                                 <span class="badge bg-success">
-                                                    Semestre <?= htmlspecialchars($ecue['semestre_ecue'] ?? '-') ?>
+                                                    Semestre <?= htmlspecialchars($ecue['semestre_ue'] ?? '-') ?>
                                                 </span>
                                             </td>
                                             <td>
@@ -487,8 +480,7 @@ error_reporting(E_ALL);
                                                 </div>
                                             </td>
                                         </tr>
-                                        <?php endforeach; ?>
-
+                                    <?php endforeach; ?>
                                 </tbody>
                             </table>
                         </div>
@@ -497,6 +489,23 @@ error_reporting(E_ALL);
             </div>
         </div>
     </div>
+
+    <!-- Modal Détails UE -->
+    <div class="modal fade" id="viewUEModal" tabindex="-1" aria-labelledby="viewUEModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="viewUEModalLabel">Détails de l'UE</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
+                </div>
+                <div class="modal-body" id="ueDetailContent">
+                    <!-- Contenu dynamique injecté ici -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
     <script>
@@ -555,11 +564,26 @@ error_reporting(E_ALL);
             filterECUE();
         }
 
-        // UE management functions
         function viewUE(id) {
-            console.log('Viewing UE:', id);
-            // Implement view UE details
+            const xhr = new XMLHttpRequest();
+            xhr.open("GET", "../pages/ecrans_admin/voir_ue.php?id=" + id, true);
+            xhr.onload = function () {
+                if (xhr.status === 200) {
+                    document.getElementById("ueDetailContent").innerHTML = xhr.responseText;
+                    new bootstrap.Modal(document.getElementById("viewUEModal")).show();
+                } else {
+                    alert("Erreur lors du chargement des données.");
+                }
+            };
+            xhr.onerror = function () {
+                alert("Erreur réseau.");
+            };
+            xhr.send();
         }
+
+
+
+
 
         function editUE(id) {
             console.log('Editing UE:', id);
