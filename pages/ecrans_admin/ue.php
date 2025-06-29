@@ -512,6 +512,21 @@ error_reporting(E_ALL);
         </div>
     </div>
 
+    <!-- ✅ MODAL DE VISUALISATION ECUE -->
+    <div class="modal fade" id="viewECUEModal" tabindex="-1" aria-labelledby="viewECUEModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="viewECUEModalLabel">Détails de l'ECUE</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
+                </div>
+                <div class="modal-body" id="ecueDetailContent">
+                    <!-- Le contenu sera injecté dynamiquement -->
+                </div>
+            </div>
+        </div>
+    </div>
+
 
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
@@ -631,10 +646,25 @@ error_reporting(E_ALL);
 
         function deleteUE(id) {
             if (confirm('Êtes-vous sûr de vouloir supprimer cette UE ? Toutes les ECUE associées seront également supprimées.')) {
-                console.log('Deleting UE:', id);
-                // Implement delete UE
+                fetch(`../pages/ecrans_admin/supprimer_ue.php?id=${id}`, {
+                    method: 'GET'
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        alert(data.message);
+                        location.reload(); // recharge la page pour mettre à jour la liste
+                    } else {
+                        alert("Erreur : " + data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Erreur:', error);
+                    alert("Une erreur s'est produite.");
+                });
             }
         }
+
 
         function manageECUE(id) {
             console.log('Managing ECUE for UE:', id);
@@ -656,22 +686,82 @@ error_reporting(E_ALL);
         }
 
         // ECUE management functions
+
         function viewECUE(id) {
-            console.log('Viewing ECUE:', id);
-            // Implement view ECUE details
+            const xhr = new XMLHttpRequest();
+            xhr.open("GET", "../pages/ecrans_admin/voir_ecue.php?id=" + id, true);
+            xhr.onload = function () {
+                if (xhr.status === 200) {
+                    document.getElementById("ecueDetailContent").innerHTML = xhr.responseText;
+                    new bootstrap.Modal(document.getElementById("viewECUEModal")).show();
+                } else {
+                    alert("Erreur lors du chargement des données.");
+                }
+            };
+            xhr.onerror = function () {
+                alert("Erreur réseau.");
+            };
+            xhr.send();
         }
 
         function editECUE(id) {
-            console.log('Editing ECUE:', id);
-            // Implement edit ECUE
+            fetch(`../pages/ecrans_admin/voir_ecue.php?id=${id}&json=1`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        const ecue = data.ecue;
+
+                        document.querySelector("#addEcueForm input[name='mode_formulaire']").value = "modification_ecue";
+                        document.querySelector("#addEcueForm input[name='id_ecue']")?.remove();
+                        
+                        const hidden = document.createElement("input");
+                        hidden.type = "hidden";
+                        hidden.name = "id_ecue";
+                        hidden.id = "id_ecue";
+                        hidden.value = ecue.id_ecue;
+                        document.getElementById("addEcueForm").prepend(hidden);
+
+                        document.getElementById("id_ue").value = ecue.id_ue;
+                        document.getElementById("code_ecue").value = ecue.code_ecue;
+                        document.getElementById("lib_ecue").value = ecue.lib_ecue;
+                        document.getElementById("credit_ecue").value = ecue.credit_ecue ?? "";
+                        document.getElementById("semestre").value = ecue.semestre ?? "";
+                        document.getElementById("annee_aca").value = ecue.annee_aca ?? "";
+                        document.getElementById("spe_ens").value = ecue.specialite ?? "";
+
+                        document.getElementById("addEcueForm").scrollIntoView({ behavior: "smooth" });
+
+                    } else {
+                        alert("Erreur : " + data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error("Erreur :", error);
+                    alert("Une erreur s'est produite.");
+                });
         }
 
         function deleteECUE(id) {
-            if (confirm('Êtes-vous sûr de vouloir supprimer cette ECUE ?')) {
-                console.log('Deleting ECUE:', id);
-                // Implement delete ECUE
+            if (confirm('Etes-vous sûr de vouloir supprimer cette ECUE ?')) {
+                fetch(`../pages/ecrans_admin/supprimer_ecue.php?id=${id}`, {
+                    method: 'GET'
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        alert(data.message);
+                        location.reload();
+                    } else {
+                        alert("Erreur : " + data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error("Erreur:", error);
+                    alert("Une erreur s'est produite.");
+                });
             }
         }
+
 
         function saveECUE() {
             const form = document.getElementById('addECUEForm');
