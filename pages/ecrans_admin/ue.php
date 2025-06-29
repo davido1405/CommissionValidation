@@ -527,6 +527,16 @@ error_reporting(E_ALL);
         </div>
     </div>
 
+    <!-- Toast de notification -->
+    <div class="position-fixed bottom-0 end-0 p-3" style="z-index: 1055">
+        <div id="toastNotification" class="toast align-items-center text-white bg-success border-0" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="d-flex">
+                <div class="toast-body" id="toastMessage">Action réussie.</div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Fermer"></button>
+            </div>
+        </div>
+    </div>
+
 
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
@@ -646,22 +656,18 @@ error_reporting(E_ALL);
 
         function deleteUE(id) {
             if (confirm('Êtes-vous sûr de vouloir supprimer cette UE ? Toutes les ECUE associées seront également supprimées.')) {
-                fetch(`../pages/ecrans_admin/supprimer_ue.php?id=${id}`, {
-                    method: 'GET'
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.status === 'success') {
-                        alert(data.message);
-                        location.reload(); // recharge la page pour mettre à jour la liste
-                    } else {
-                        alert("Erreur : " + data.message);
-                    }
-                })
-                .catch(error => {
-                    console.error('Erreur:', error);
-                    alert("Une erreur s'est produite.");
-                });
+                fetch(`../pages/ecrans_admin/supprimer_UE_ECUE.php?id=${id}`, { method: 'GET' })
+                    .then(response => response.json())
+                    .then(data => {
+                        showToast(data.message, data.status === 'success' ? 'success' : 'error');
+                        if (data.status === 'success') {
+                            setTimeout(() => location.reload(), 1200);
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Erreur:', error);
+                        showToast("Une erreur s'est produite.", 'error');
+                    });
             }
         }
 
@@ -742,24 +748,41 @@ error_reporting(E_ALL);
         }
 
         function deleteECUE(id) {
-            if (confirm('Etes-vous sûr de vouloir supprimer cette ECUE ?')) {
-                fetch(`../pages/ecrans_admin/supprimer_ecue.php?id=${id}`, {
-                    method: 'GET'
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.status === 'success') {
-                        alert(data.message);
-                        location.reload();
-                    } else {
-                        alert("Erreur : " + data.message);
-                    }
-                })
-                .catch(error => {
-                    console.error("Erreur:", error);
-                    alert("Une erreur s'est produite.");
-                });
+            if (confirm('Êtes-vous sûr de vouloir supprimer cette ECUE ?')) {
+                fetch(`../pages/ecrans_admin/supprimer_ecue.php?id=${id}`, { method: 'GET' })
+                    .then(response => response.json())
+                    .then(data => {
+                        showToast(data.message, data.status === 'success' ? 'success' : 'error');
+                        if (data.status === 'success') {
+                            setTimeout(() => location.reload(), 1200);
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Erreur:', error);
+                        showToast("Une erreur s'est produite.", 'error');
+                    });
             }
+        }
+
+        //Gérer notif
+        function showToast(message, type = 'success') {
+            const toastEl = document.getElementById('toastNotification');
+            const toastBody = document.getElementById('toastMessage');
+
+            toastBody.innerText = message;
+
+            // Appliquer les couleurs en fonction du type
+            toastEl.classList.remove('bg-success', 'bg-danger', 'bg-warning');
+            if (type === 'error') {
+                toastEl.classList.add('bg-danger');
+            } else if (type === 'warning') {
+                toastEl.classList.add('bg-warning');
+            } else {
+                toastEl.classList.add('bg-success');
+            }
+
+            const bsToast = new bootstrap.Toast(toastEl);
+            bsToast.show();
         }
 
 
@@ -773,6 +796,57 @@ error_reporting(E_ALL);
                 form.reportValidity();
             }
         }
+
+        function handleUeSubmit(event) {
+            event.preventDefault();
+
+            const form = document.getElementById('addUeForm');
+            const formData = new FormData(form);
+
+            fetch(form.action, {
+                method: 'POST',
+                body: formData
+            })
+            .then(r => r.json())
+            .then(data => {
+                showToast(data.message, data.status === 'success' ? 'success' : 'error');
+                if (data.status === 'success') {
+                    setTimeout(() => location.reload(), 1200);
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                showToast("Erreur lors de l'envoi du formulaire.", 'error');
+            });
+
+            return false;
+        }
+
+        function handleEcueSubmit(event) {
+            event.preventDefault();
+
+            const form = document.getElementById('addEcueForm');
+            const formData = new FormData(form);
+
+            fetch(form.action, {
+                method: 'POST',
+                body: formData
+            })
+            .then(r => r.json())
+            .then(data => {
+                showToast(data.message, data.status === 'success' ? 'success' : 'error');
+                if (data.status === 'success') {
+                    setTimeout(() => location.reload(), 1200);
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                showToast("Erreur lors de l'envoi du formulaire.", 'error');
+            });
+
+            return false;
+        }
+
 
         function exportCurriculum() {
             console.log('Exporting curriculum...');
