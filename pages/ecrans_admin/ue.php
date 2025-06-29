@@ -28,7 +28,8 @@ error_reporting(E_ALL);
                             </div>
                             <div class="modal-body">
                                 <form id="addUeForm" method="POST" action="../pages/ecrans_admin/traitement_ue_ecue.php" onsubmit="return handleUeSubmit(event)">
-                                    <input type="hidden" name="mode_formulaire" value="ajout_ue">
+                                    <input type="hidden" name="mode_formulaire" id="mode_formulaire" value="ajout_ue">
+                                    <input type="hidden" name="id_ue" id="id_ue" value="">
 
                                     <div class="row g-3">
                                         <div class="col-md-6">
@@ -68,15 +69,21 @@ error_reporting(E_ALL);
                                             <select class="form-select" id="id_ens_responsable" name="id_ens_responsable" required>
                                                 <option value="">-- Sélectionnez un enseignant disponible --</option>
                                                 <?php
-                                                $stmt = $pdo->prepare("
-                                                    SELECT e.id_ens, CONCAT(e.prenoms_ens, ' ', e.nom_ens) AS nom_complet
-                                                    FROM enseignant e
-                                                    WHERE e.id_ens NOT IN (SELECT id_ens FROM ue WHERE id_ens IS NOT NULL)
-                                                ");
-                                                $stmt->execute();
-                                                foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $ens) {
-                                                    echo "<option value=\"{$ens['id_ens']}\">" . htmlspecialchars($ens['nom_complet']) . "</option>";
-                                                }
+                                                    // Si une UE est en cours d'édition, inclure son responsable
+                                                    $idUEEnCours = isset($_GET['id']) ? (int)$_GET['id'] : 0;
+                                                    $stmt = $pdo->prepare("
+                                                        SELECT e.id_ens, CONCAT(e.prenoms_ens, ' ', e.nom_ens) AS nom_complet
+                                                        FROM enseignant e
+                                                        WHERE e.id_ens NOT IN (
+                                                            SELECT id_ens FROM ue WHERE id_ens IS NOT NULL AND id_ue != :id_ue
+                                                        ) OR e.id_ens = (
+                                                            SELECT id_ens FROM ue WHERE id_ue = :id_ue
+                                                        )
+                                                    ");
+                                                    $stmt->execute(['id_ue' => $idUEEnCours]);
+                                                    foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $ens) {
+                                                        echo "<option value=\"{$ens['id_ens']}\">" . htmlspecialchars($ens['nom_complet']) . "</option>";
+                                                    }
                                                 ?>
                                             </select>
                                         </div>
@@ -586,9 +593,41 @@ error_reporting(E_ALL);
 
 
         function editUE(id) {
-            console.log('Editing UE:', id);
-            // Implement edit UE
-        }
+            fetch(`../pages/ecrans_admin/voir_ue.php?id=${id}&json=1`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        const ue = data.ue;
+
+                        document.getElementById("mode_formulaire").value = "modification_ue";
+                        document.getElementById("id_ue").value = ue.id_ue;
+                        document.getElementById("code_ue").value = ue.code_ue;
+                        document.getElementById("lib_ue").value = ue.lib_ue;
+                        document.getElementById("credit_ue").value = ue.credit_ue;
+                        document.getElementById("semestre").value = ue.semestre;
+                        document.getElementById("id_niv_etu").value = ue.id_niv_etu;
+
+                        // ✅ Sélection du responsable
+                        if (ue.id_ens) {
+                            document.getElementById("id_ens_responsable").value = ue.id_ens;
+                        }
+
+                        console.log("Responsable ID UE:", ue.id_ens);
+
+                        document.getElementById("addUeForm").scrollIntoView({ behavior: "smooth" });
+
+                    } else {
+                        alert("Erreur : " + data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error("Erreur :", error);
+                    alert("Une erreur s'est produite.");
+                });
+    }
+
+
+
 
         function deleteUE(id) {
             if (confirm('Êtes-vous sûr de vouloir supprimer cette UE ? Toutes les ECUE associées seront également supprimées.')) {

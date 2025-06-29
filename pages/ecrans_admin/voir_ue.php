@@ -1,8 +1,14 @@
 <?php
 require_once(__DIR__ . '/../../config/db.php');
 
+// ID obligatoire
 if (!isset($_GET['id']) || !is_numeric($_GET['id'])) {
-    echo "<div class='text-danger'>ID UE invalide</div>";
+    if (isset($_GET['json'])) {
+        header('Content-Type: application/json');
+        echo json_encode(['status' => 'error', 'message' => 'ID UE invalide']);
+    } else {
+        echo "<div class='text-danger'>ID UE invalide</div>";
+    }
     exit;
 }
 
@@ -11,6 +17,7 @@ $id_ue = (int) $_GET['id'];
 // Récupération des infos UE
 $stmt = $pdo->prepare("
     SELECT ue.*, 
+           e.id_ens AS id_responsable,
            CONCAT(e.prenoms_ens, ' ', e.nom_ens) AS responsable,
            n.lib_niv_etu
     FROM ue
@@ -18,15 +25,32 @@ $stmt = $pdo->prepare("
     LEFT JOIN niveau_etude n ON ue.id_niv_etu = n.id_niv_etu
     WHERE ue.id_ue = ?
 ");
+
+
 $stmt->execute([$id_ue]);
 $ue = $stmt->fetch(PDO::FETCH_ASSOC);
+$ue['id_ens'] = $ue['id_responsable']; // pour compatibilité JS
+
 
 if (!$ue) {
-    echo "<div class='text-danger'>UE non trouvée</div>";
+    if (isset($_GET['json'])) {
+        header('Content-Type: application/json');
+        echo json_encode(['status' => 'error', 'message' => 'UE non trouvée']);
+    } else {
+        echo "<div class='text-danger'>UE non trouvée</div>";
+    }
+    exit;
+}
+
+if (isset($_GET['json'])) {
+    //$ue['id_ens'] = $ue['id_responsable'];
+    header('Content-Type: application/json');
+    echo json_encode(['status' => 'success', 'ue' => $ue]);
     exit;
 }
 ?>
 
+<!-- Affichage HTML pour le modal -->
 <div class="row">
     <div class="col-md-12">
         <ul class="list-group">
