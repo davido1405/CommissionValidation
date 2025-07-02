@@ -1,204 +1,165 @@
+<?php
+require_once (__DIR__ . '/../../config/db.php');
+if (session_status() === PHP_SESSION_NONE) session_start();
 
-        <div class="header">
-            <div class="d-flex align-items-center">
-                <h2 class="page-title">
-                    <i class="fas fa-layer-group me-2"></i>
-                    Gestion des Niveaux d'Étude
-                </h2>
-                <div class="ms-4 d-none d-md-block">
-                    <span class="badge bg-success p-2">Année académique: 2024-2025</span>
-                </div>
-            </div>
-            
-            <div class="d-flex align-items-center gap-4">
-                <div class="d-none d-md-flex align-items-center">
-                    <span class="text-dark me-3">Bienvenue, <strong>Thomas Bernard</strong></span>
-                </div>
-                <div class="dropdown me-3">
-                    <a class="btn btn-light position-relative rounded-circle p-2" href="#" role="button" id="notificationDropdown" data-bs-toggle="dropdown" aria-expanded="false">
-                        <i class="fas fa-bell"></i>
-                        <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
-                            4
-                            <span class="visually-hidden">nouvelles notifications</span>
-                        </span>
-                    </a>
-                    <ul class="dropdown-menu dropdown-menu-end shadow" aria-labelledby="notificationDropdown" style="min-width: 320px;">
-                        <li><h6 class="dropdown-header bg-light py-3">Notifications</h6></li>
-                        <li><a class="dropdown-item py-3 border-bottom" href="#">
-                            <div class="d-flex align-items-center">
-                                <div class="flex-shrink-0">
-                                    <div class="bg-primary text-white rounded-circle p-2">
-                                        <i class="fas fa-layer-group"></i>
-                                    </div>
-                                </div>
-                                <div class="flex-grow-1 ms-3">
-                                    <p class="mb-0 fw-bold">Nouveau niveau Master 2 Pro ajouté</p>
-                                    <small class="text-muted">Il y a 1 heure</small>
-                                </div>
-                            </div>
-                        </a></li>
-                        <li><hr class="dropdown-divider"></li>
-                        <li><a class="dropdown-item text-center py-2" href="#">Voir toutes les notifications</a></li>
-                    </ul>
-                </div>
-                <div class="dropdown">
-                    <a class="btn btn-outline-dark d-flex align-items-center" href="#" role="button" id="userDropdown" data-bs-toggle="dropdown" aria-expanded="false">
-                        <div class="user-avatar me-2 bg-white">
-                            <i class="fas fa-user"></i>
-                        </div>
-                        <span class="d-none d-md-inline">Mon compte</span>
-                        <i class="fas fa-chevron-down ms-2 d-none d-md-inline"></i>
-                    </a>
-                    <ul class="dropdown-menu dropdown-menu-end shadow" aria-labelledby="userDropdown">
-                        <li><div class="dropdown-header bg-light py-3">Thomas Bernard</div></li>
-                        <li><a class="dropdown-item py-2" href="#"><i class="fas fa-user-circle me-2"></i>Mon profil</a></li>
-                        <li><a class="dropdown-item py-2" href="#"><i class="fas fa-cog me-2"></i>Paramètres</a></li>
-                        <li><a class="dropdown-item py-2" href="#"><i class="fas fa-question-circle me-2"></i>Aide</a></li>
-                        <li><hr class="dropdown-divider"></li>
-                        <li><a class="dropdown-item text-danger py-2" href="#"><i class="fas fa-sign-out-alt me-2"></i>Déconnexion</a></li>
-                    </ul>
-                </div>
-            </div>
-        </div>
+// Vérifier la connexion
+if (!isset($_SESSION['id_util'])) {
+    header("Location: ../login.php");
+    exit;
+}
+
+
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
+
+// Charger les niveaux d'études actifs, groupés par cycle
+$sql = "SELECT cycle, code, lib_niv_etu, credits, duree 
+        FROM niveau_etude 
+        WHERE actif = 1 
+        ORDER BY id_niv_etu -- ou une autre colonne existante qui a du sens
+";
+
+$stmt = $pdo->prepare($sql);
+$stmt->execute();
+$niveaux = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+// Grouper les niveaux par cycle
+$cycles = [];
+foreach ($niveaux as $niv) {
+    $cycles[$niv['cycle']][] = $niv;
+}
+
+// Icônes et couleurs associées
+$styles = [
+    'Licence' => ['icon' => 'fas fa-certificate', 'color' => 'success'],
+    'Master' => ['icon' => 'fas fa-award', 'color' => 'warning'],
+    'Doctorat' => ['icon' => 'fas fa-trophy', 'color' => 'info'],
+];
+
+
+
+// Requête pour récupérer les niveaux avec nombre d'étudiants inscrits
+$sql = "
+    SELECT 
+        ne.id_niv_etu, ne.code, ne.lib_niv_etu, ne.cycle, ne.duree, ne.credits, ne.actif,
+        (SELECT COUNT(DISTINCT i.num_etu) FROM inscrire i WHERE i.id_niv_etu = ne.id_niv_etu) AS nb_etudiants
+    FROM niveau_etude ne
+    WHERE ne.actif = 1
+    ORDER BY FIELD(ne.cycle, 'Licence', 'Master', 'Doctorat'), ne.code
+";
+$stmt = $pdo->prepare($sql);
+$stmt->execute();
+$niveaux = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+
+// Fonction pour traduire statut actif
+function statutLabel(int $actif): array {
+    if ($actif === 1) return ['label' => 'Actif', 'class' => 'status-active badge bg-success'];
+    if ($actif === 0) return ['label' => 'Inactif', 'class' => 'badge bg-secondary'];
+    return ['label' => 'Archivé', 'class' => 'badge bg-dark'];
+}
+
+?>
+
+
 
         <div class="content-area">
-            <!-- Statistics Cards Row -->
-            <div class="row g-4 mb-4">
-                <div class="col-md-3">
-                    <div class="stats-card h-100">
-                        <div class="stats-card-content">
-                            <div class="stats-icon bg-primary">
-                                <i class="fas fa-layer-group"></i>
-                            </div>
-                            <div class="stats-title">Total Niveaux</div>
-                            <div class="stats-number">8</div>
-                            <div class="stats-trend">
-                                <i class="fas fa-graduation-cap"></i> LMD + Spécialisations
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="stats-card h-100">
-                        <div class="stats-card-content">
-                            <div class="stats-icon bg-success">
-                                <i class="fas fa-certificate"></i>
-                            </div>
-                            <div class="stats-title">Licence</div>
-                            <div class="stats-number">285</div>
-                            <div class="stats-trend">
-                                <i class="fas fa-users"></i> Étudiants inscrits
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="stats-card h-100">
-                        <div class="stats-card-content">
-                            <div class="stats-icon bg-warning">
-                                <i class="fas fa-award"></i>
-                            </div>
-                            <div class="stats-title">Master</div>
-                            <div class="stats-number">197</div>
-                            <div class="stats-trend">
-                                <i class="fas fa-users"></i> Étudiants inscrits
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="stats-card h-100">
-                        <div class="stats-card-content">
-                            <div class="stats-icon bg-info">
-                                <i class="fas fa-trophy"></i>
-                            </div>
-                            <div class="stats-title">Diplômés 2023-24</div>
-                            <div class="stats-number">156</div>
-                            <div class="stats-trend">
-                                <i class="fas fa-medal"></i> Année précédente
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
             <!-- LMD Structure Overview -->
             <div class="row g-4 mb-4">
                 <div class="col-md-12">
                     <div class="dashboard-card">
                         <h5 class="mb-4"><i class="fas fa-sitemap me-2"></i>Structure du Système LMD</h5>
-                        
                         <div class="row">
-                            <div class="col-md-4">
-                                <div class="text-center p-4 border rounded h-100">
-                                    <div class="mb-3">
-                                        <i class="fas fa-certificate fa-3x text-success"></i>
-                                    </div>
-                                    <h4 class="text-success">LICENCE</h4>
-                                    <p class="text-muted">3 années • 180 crédits ECTS</p>
-                                    <div class="d-flex justify-content-around mt-3">
-                                        <div class="text-center">
-                                            <strong>L1</strong><br>
-                                            <small>60 crédits</small>
-                                        </div>
-                                        <div class="text-center">
-                                            <strong>L2</strong><br>
-                                            <small>60 crédits</small>
-                                        </div>
-                                        <div class="text-center">
-                                            <strong>L3</strong><br>
-                                            <small>60 crédits</small>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
+                            <?php 
+                            // Styles pour les cycles et niveaux avec icones et couleurs par niveau
+                            $styles = [
+                                'Licence' => [
+                                    'icon' => 'fas fa-certificate', 
+                                    'color' => 'success', 
+                                    'levels' => [
+                                        'L1' => ['color' => 'success', 'icon' => 'fas fa-book-reader'],
+                                        'L2' => ['color' => 'info', 'icon' => 'fas fa-book'],
+                                        'L3' => ['color' => 'primary', 'icon' => 'fas fa-graduation-cap'],
+                                    ]
+                                ],
+                                'Master' => [
+                                    'icon' => 'fas fa-award', 
+                                    'color' => 'warning', 
+                                    'levels' => [
+                                        'M1' => ['color' => 'warning', 'icon' => 'fas fa-chalkboard-teacher'],
+                                        'M2' => ['color' => 'danger', 'icon' => 'fas fa-flask'],
+                                    ],
+                                    'badge_recherche' => 'bg-info', 
+                                    'badge_pro' => 'bg-success'
+                                ],
+                                'Doctorat' => [
+                                    'icon' => 'fas fa-trophy', 
+                                    'color' => 'info', 
+                                    'levels' => [
+                                        'D' => ['color' => 'info', 'icon' => 'fas fa-flask'], // On peut juste dire "D" pour doctorat
+                                    ],
+                                    'badge_recherche' => 'bg-purple',
+                                ],
+                            ];
                             
-                            <div class="col-md-4">
-                                <div class="text-center p-4 border rounded h-100">
-                                    <div class="mb-3">
-                                        <i class="fas fa-award fa-3x text-warning"></i>
-                                    </div>
-                                    <h4 class="text-warning">MASTER</h4>
-                                    <p class="text-muted">2 années • 120 crédits ECTS</p>
-                                    <div class="d-flex justify-content-around mt-3">
-                                        <div class="text-center">
-                                            <strong>M1</strong><br>
-                                            <small>60 crédits</small>
+                            foreach ($cycles as $cycle => $niveauxCycle): 
+                                foreach ($niveauxCycle as $niv):
+                                    // Sécurisation de l'accès à 'code'
+                                    $nivCode = !empty($niv['code']) ? $niv['code'] : null;
+
+                                    // Définit le style du niveau (ou fallback sur cycle)
+                                    if ($nivCode && isset($styles[$cycle]['levels'][$nivCode])) {
+                                        $levelStyle = $styles[$cycle]['levels'][$nivCode];
+                                    } else {
+                                        $levelStyle = ['color' => $styles[$cycle]['color'], 'icon' => $styles[$cycle]['icon']];
+                                    }
+
+                                    // Valeurs sécurisées pour durée et crédits
+                                    $duree = isset($niv['duree']) ? $niv['duree'] : '?';
+                                    $credits = isset($niv['credits']) ? $niv['credits'] : '?';
+                            ?>
+                                <div class="col-md-4">
+                                    <div class="text-center p-4 border rounded h-100 shadow-sm" style="background-color: #f9f9f9;">
+                                        <div class="mb-3">
+                                            <i class="<?= $levelStyle['icon'] ?> fa-3x text-<?= $levelStyle['color'] ?>"></i>
                                         </div>
-                                        <div class="text-center">
-                                            <strong>M2</strong><br>
-                                            <small>60 crédits</small>
-                                        </div>
-                                    </div>
-                                    <div class="mt-3">
-                                        <span class="badge bg-info me-1">Recherche</span>
-                                        <span class="badge bg-success">Professionnel</span>
+                                        <h4 class="text-<?= $levelStyle['color'] ?>"><?= strtoupper($nivCode ?? 'N/A') ?></h4>
+                                        <p class="text-muted">
+                                            <?php
+                                                if ($cycle === 'Doctorat') {
+                                                    echo $duree . " années minimum";
+                                                } else {
+                                                    echo $duree . " années • " . $credits . " crédits ECTS";
+                                                }
+                                            ?>
+                                        </p>
+
+                                        <?php if ($cycle === 'Doctorat'): ?>
+                                            <div class="mt-3">
+                                                <span class="badge <?= $styles[$cycle]['badge_recherche'] ?? 'bg-primary' ?>">Recherche avancée</span>
+                                            </div>
+                                        <?php elseif ($cycle === 'Master'): ?>
+                                            <div class="mt-3">
+                                                <span class="badge <?= $styles[$cycle]['badge_recherche'] ?>">Recherche</span>
+                                                <span class="badge <?= $styles[$cycle]['badge_pro'] ?>">Professionnel</span>
+                                            </div>
+                                        <?php endif; ?>
                                     </div>
                                 </div>
-                            </div>
-                            
-                            <div class="col-md-4">
-                                <div class="text-center p-4 border rounded h-100">
-                                    <div class="mb-3">
-                                        <i class="fas fa-trophy fa-3x text-info"></i>
-                                    </div>
-                                    <h4 class="text-info">DOCTORAT</h4>
-                                    <p class="text-muted">3 années minimum</p>
-                                    <div class="mt-3">
-                                        <strong>180</strong><br>
-                                        <small>crédits ECTS minimum requis</small>
-                                    </div>
-                                    <div class="mt-3">
-                                        <span class="badge bg-purple">Recherche avancée</span>
-                                    </div>
-                                </div>
-                            </div>
+                            <?php 
+                                endforeach;
+                            endforeach; 
+                            ?>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Study Levels Management -->
+
+
+
+            <!-- Gestion niveaux d'étude -->
             <div class="dashboard-card">
                 <div class="d-flex justify-content-between align-items-center mb-4">
                     <div>
@@ -216,29 +177,36 @@
                 </div>
 
                 <!-- Search and Filters -->
+                <?php
+                    // Exemples dynamiques de cycles et statuts (tu peux adapter selon ta source de données)
+                    $cyclesOptions = ['Licence', 'Master', 'Doctorat'];
+                    $statusOptions = ['Actif', 'Inactif', 'Archivé'];
+                ?>
+
                 <div class="row mb-4 align-items-center">
                     <div class="col-md-4">
-                        <div class="search-box">
-                            <i class="fas fa-search text-muted"></i>
-                            <input type="text" id="searchLevel" placeholder="Rechercher un niveau..." onkeyup="filterLevels()">
+                        <div class="search-box position-relative">
+                            <i class="fas fa-search text-muted position-absolute" style="top: 10px; left: 10px;"></i>
+                            <input type="text" id="searchLevel" placeholder="Rechercher un niveau..."
+                                onkeyup="filterLevels()" style="padding-left: 30px;">
                         </div>
                     </div>
                     <div class="col-md-8">
                         <div class="row g-2">
                             <div class="col-md-4">
-                                <select class="custom-select" id="filterCycle" onchange="filterLevels()">
+                                <select class="form-select" id="filterCycle" onchange="filterLevels()">
                                     <option value="">Tous les cycles</option>
-                                    <option value="Licence">Licence</option>
-                                    <option value="Master">Master</option>
-                                    <option value="Doctorat">Doctorat</option>
+                                    <?php foreach ($cyclesOptions as $cycle): ?>
+                                        <option value="<?= htmlspecialchars($cycle) ?>"><?= htmlspecialchars($cycle) ?></option>
+                                    <?php endforeach; ?>
                                 </select>
                             </div>
                             <div class="col-md-4">
-                                <select class="custom-select" id="filterStatus" onchange="filterLevels()">
+                                <select class="form-select" id="filterStatus" onchange="filterLevels()">
                                     <option value="">Tous les statuts</option>
-                                    <option value="Actif">Actif</option>
-                                    <option value="Inactif">Inactif</option>
-                                    <option value="Archivé">Archivé</option>
+                                    <?php foreach ($statusOptions as $status): ?>
+                                        <option value="<?= htmlspecialchars($status) ?>"><?= htmlspecialchars($status) ?></option>
+                                    <?php endforeach; ?>
                                 </select>
                             </div>
                             <div class="col-md-4">
@@ -249,6 +217,7 @@
                         </div>
                     </div>
                 </div>
+
 
                 <!-- Levels Table -->
                 <div class="table-responsive">
@@ -266,276 +235,153 @@
                             </tr>
                         </thead>
                         <tbody>
-                            <tr>
-                                <td class="fw-bold">L1</td>
-                                <td>
-                                    <div>
-                                        <div class="fw-bold">Licence 1</div>
-                                        <small class="text-muted">Première année de Licence</small>
-                                    </div>
-                                </td>
-                                <td><span class="badge bg-success">Licence</span></td>
-                                <td>1 an</td>
-                                <td><span class="badge bg-primary">60 crédits</span></td>
-                                <td>
-                                    <div class="d-flex align-items-center">
-                                        <span class="me-2">95</span>
-                                        <div class="progress flex-grow-1" style="height: 6px; max-width: 60px;">
-                                            <div class="progress-bar bg-success" style="width: 85%"></div>
+                            <?php
+                            if (!function_exists('statutLabel')) {
+                                function statutLabel(int $actif): array {
+                                    if ($actif === 1) return ['label' => 'Actif', 'class' => 'status-active badge bg-success'];
+                                    if ($actif === 0) return ['label' => 'Inactif', 'class' => 'badge bg-secondary'];
+                                    return ['label' => 'Archivé', 'class' => 'badge bg-dark'];
+                                }
+                            }
+
+                            $maxStudents = 120; // valeur max pour barre de progression
+
+                            foreach ($niveaux as $niv):
+                                $nbEtudiants = isset($niv['nb_etudiants']) ? (int)$niv['nb_etudiants'] : 0;
+                                $progress = min(100, round(($nbEtudiants / $maxStudents) * 100));
+
+                                $badgeCycleClass = match ($niv['cycle']) {
+                                    'Licence' => 'bg-success',
+                                    'Master' => 'bg-warning text-dark',
+                                    'Doctorat' => 'bg-info text-white',
+                                    default => 'bg-secondary',
+                                };
+
+                                $statut = statutLabel((int)($niv['actif'] ?? 0));
+                            ?>
+                                <tr>
+                                    <td class="fw-bold"><?= htmlspecialchars($niv['code'] ?? '') ?></td>
+                                    <td>
+                                        <div>
+                                            <div class="fw-bold"><?= htmlspecialchars($niv['lib_niv_etu'] ?? '') ?></div>
                                         </div>
-                                    </div>
-                                </td>
-                                <td><span class="badge status-active">Actif</span></td>
-                                <td>
-                                    <div class="btn-group" role="group">
-                                        <button class="btn btn-sm btn-outline-primary" title="Voir" onclick="viewLevel(1)">
-                                            <i class="fas fa-eye"></i>
-                                        </button>
-                                        <button class="btn btn-sm btn-outline-warning" title="Modifier" onclick="editLevel(1)">
-                                            <i class="fas fa-edit"></i>
-                                        </button>
-                                        <button class="btn btn-sm btn-outline-info" title="Spécialisations" onclick="manageSpecializations(1)">
-                                            <i class="fas fa-tags"></i>
-                                        </button>
-                                        <button class="btn btn-sm btn-outline-danger" title="Archiver" onclick="archiveLevel(1)">
-                                            <i class="fas fa-archive"></i>
-                                        </button>
-                                    </div>
-                                </td>
-                            </tr>
-                            <tr>
-                                <td class="fw-bold">L2</td>
-                                <td>
-                                    <div>
-                                        <div class="fw-bold">Licence 2</div>
-                                        <small class="text-muted">Deuxième année de Licence</small>
-                                    </div>
-                                </td>
-                                <td><span class="badge bg-success">Licence</span></td>
-                                <td>1 an</td>
-                                <td><span class="badge bg-primary">60 crédits</span></td>
-                                <td>
-                                    <div class="d-flex align-items-center">
-                                        <span class="me-2">89</span>
-                                        <div class="progress flex-grow-1" style="height: 6px; max-width: 60px;">
-                                            <div class="progress-bar bg-success" style="width: 78%"></div>
+                                    </td>
+                                    <td><span class="badge <?= $badgeCycleClass ?>"><?= htmlspecialchars($niv['cycle'] ?? '') ?></span></td>
+                                    <td><?= htmlspecialchars($niv['duree'] ?? '') ?> an<?= (isset($niv['duree']) && $niv['duree'] > 1) ? 's' : '' ?></td>
+                                    <td><span class="badge bg-primary"><?= htmlspecialchars($niv['credits'] ?? '') ?> crédits</span></td>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <span class="me-2"><?= $nbEtudiants ?></span>
+                                            <div class="progress flex-grow-1" style="height: 6px; max-width: 60px;">
+                                                <div class="progress-bar <?= $badgeCycleClass ?>" style="width: <?= $progress ?>%"></div>
+                                            </div>
                                         </div>
-                                    </div>
-                                </td>
-                                <td><span class="badge status-active">Actif</span></td>
-                                <td>
-                                    <div class="btn-group" role="group">
-                                        <button class="btn btn-sm btn-outline-primary" title="Voir" onclick="viewLevel(2)">
-                                            <i class="fas fa-eye"></i>
-                                        </button>
-                                        <button class="btn btn-sm btn-outline-warning" title="Modifier" onclick="editLevel(2)">
-                                            <i class="fas fa-edit"></i>
-                                        </button>
-                                        <button class="btn btn-sm btn-outline-info" title="Spécialisations" onclick="manageSpecializations(2)">
-                                            <i class="fas fa-tags"></i>
-                                        </button>
-                                        <button class="btn btn-sm btn-outline-danger" title="Archiver" onclick="archiveLevel(2)">
-                                            <i class="fas fa-archive"></i>
-                                        </button>
-                                    </div>
-                                </td>
-                            </tr>
-                            <tr>
-                                <td class="fw-bold">L3</td>
-                                <td>
-                                    <div>
-                                        <div class="fw-bold">Licence 3</div>
-                                        <small class="text-muted">Troisième année de Licence</small>
-                                    </div>
-                                </td>
-                                <td><span class="badge bg-success">Licence</span></td>
-                                <td>1 an</td>
-                                <td><span class="badge bg-primary">60 crédits</span></td>
-                                <td>
-                                    <div class="d-flex align-items-center">
-                                        <span class="me-2">101</span>
-                                        <div class="progress flex-grow-1" style="height: 6px; max-width: 60px;">
-                                            <div class="progress-bar bg-success" style="width: 92%"></div>
+                                    </td>
+                                    <td><span class="<?= $statut['class'] ?>"><?= $statut['label'] ?></span></td>
+                                    <td>
+                                        <div class="btn-group" role="group">
+                                            <button class="btn btn-sm btn-outline-primary" title="Voir" onclick="viewLevel(<?= (int)$niv['id_niv_etu'] ?>)">
+                                                <i class="fas fa-eye"></i>
+                                            </button>
+                                            <button class="btn btn-sm btn-outline-warning" title="Modifier" onclick="editLevel(<?= (int)$niv['id_niv_etu'] ?>)">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                            <button class="btn btn-sm btn-outline-info" title="Spécialisations" onclick="manageSpecializations(<?= (int)$niv['id_niv_etu'] ?>)">
+                                                <i class="fas fa-tags"></i>
+                                            </button>
+                                            <button class="btn btn-sm btn-outline-danger" title="Archiver" onclick="archiveLevel(<?= (int)$niv['id_niv_etu'] ?>)">
+                                                <i class="fas fa-archive"></i>
+                                            </button>
                                         </div>
-                                    </div>
-                                </td>
-                                <td><span class="badge status-active">Actif</span></td>
-                                <td>
-                                    <div class="btn-group" role="group">
-                                        <button class="btn btn-sm btn-outline-primary" title="Voir" onclick="viewLevel(3)">
-                                            <i class="fas fa-eye"></i>
-                                        </button>
-                                        <button class="btn btn-sm btn-outline-warning" title="Modifier" onclick="editLevel(3)">
-                                            <i class="fas fa-edit"></i>
-                                        </button>
-                                        <button class="btn btn-sm btn-outline-info" title="Spécialisations" onclick="manageSpecializations(3)">
-                                            <i class="fas fa-tags"></i>
-                                        </button>
-                                        <button class="btn btn-sm btn-outline-danger" title="Archiver" onclick="archiveLevel(3)">
-                                            <i class="fas fa-archive"></i>
-                                        </button>
-                                    </div>
-                                </td>
-                            </tr>
-                            <tr>
-                                <td class="fw-bold">M1</td>
-                                <td>
-                                    <div>
-                                        <div class="fw-bold">Master 1</div>
-                                        <small class="text-muted">Première année de Master</small>
-                                    </div>
-                                </td>
-                                <td><span class="badge bg-warning text-dark">Master</span></td>
-                                <td>1 an</td>
-                                <td><span class="badge bg-primary">60 crédits</span></td>
-                                <td>
-                                    <div class="d-flex align-items-center">
-                                        <span class="me-2">78</span>
-                                        <div class="progress flex-grow-1" style="height: 6px; max-width: 60px;">
-                                            <div class="progress-bar bg-warning" style="width: 68%"></div>
-                                        </div>
-                                    </div>
-                                </td>
-                                <td><span class="badge status-active">Actif</span></td>
-                                <td>
-                                    <div class="btn-group" role="group">
-                                        <button class="btn btn-sm btn-outline-primary" title="Voir" onclick="viewLevel(4)">
-                                            <i class="fas fa-eye"></i>
-                                        </button>
-                                        <button class="btn btn-sm btn-outline-warning" title="Modifier" onclick="editLevel(4)">
-                                            <i class="fas fa-edit"></i>
-                                        </button>
-                                        <button class="btn btn-sm btn-outline-info" title="Spécialisations" onclick="manageSpecializations(4)">
-                                            <i class="fas fa-tags"></i>
-                                        </button>
-                                        <button class="btn btn-sm btn-outline-danger" title="Archiver" onclick="archiveLevel(4)">
-                                            <i class="fas fa-archive"></i>
-                                        </button>
-                                    </div>
-                                </td>
-                            </tr>
-                            <tr>
-                                <td class="fw-bold">M2</td>
-                                <td>
-                                    <div>
-                                        <div class="fw-bold">Master 2</div>
-                                        <small class="text-muted">Deuxième année de Master</small>
-                                    </div>
-                                </td>
-                                <td><span class="badge bg-warning text-dark">Master</span></td>
-                                <td>1 an</td>
-                                <td><span class="badge bg-primary">60 crédits</span></td>
-                                <td>
-                                    <div class="d-flex align-items-center">
-                                        <span class="me-2">119</span>
-                                        <div class="progress flex-grow-1" style="height: 6px; max-width: 60px;">
-                                            <div class="progress-bar bg-warning" style="width: 95%"></div>
-                                        </div>
-                                    </div>
-                                </td>
-                                <td><span class="badge status-active">Actif</span></td>
-                                <td>
-                                    <div class="btn-group" role="group">
-                                        <button class="btn btn-sm btn-outline-primary" title="Voir" onclick="viewLevel(5)">
-                                            <i class="fas fa-eye"></i>
-                                        </button>
-                                        <button class="btn btn-sm btn-outline-warning" title="Modifier" onclick="editLevel(5)">
-                                            <i class="fas fa-edit"></i>
-                                        </button>
-                                        <button class="btn btn-sm btn-outline-info" title="Spécialisations" onclick="manageSpecializations(5)">
-                                            <i class="fas fa-tags"></i>
-                                        </button>
-                                        <button class="btn btn-sm btn-outline-danger" title="Archiver" onclick="archiveLevel(5)">
-                                            <i class="fas fa-archive"></i>
-                                        </button>
-                                    </div>
-                                </td>
-                            </tr>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+
                         </tbody>
                     </table>
                 </div>
+
             </div>
         </div>
     </div>
 
     <!-- Add Level Modal -->
-    <div class="modal fade" id="addLevelModal" tabindex="-1" aria-labelledby="addLevelModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-lg">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="addLevelModalLabel">
-                        <i class="fas fa-plus me-2"></i>Ajouter un nouveau niveau d'étude
-                    </h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <form id="addLevelForm">
-                        <div class="row g-3">
-                            <div class="col-md-6">
-                                <label for="levelCode" class="form-label">Code <span class="text-danger">*</span></label>
-                                <input type="text" class="form-control" id="levelCode" name="code" required>
-                                <div class="form-text">Ex: L1, L2, M1, M2, D1...</div>
-                            </div>
-                            <div class="col-md-6">
-                                <label for="levelName" class="form-label">Nom du niveau <span class="text-danger">*</span></label>
-                                <input type="text" class="form-control" id="levelName" name="lib_niv_etu" required>
-                            </div>
-                            <div class="col-md-6">
-                                <label for="levelCycle" class="form-label">Cycle <span class="text-danger">*</span></label>
-                                <select class="form-select" id="levelCycle" name="cycle" required>
-                                    <option value="">Choisir...</option>
-                                    <option value="Licence">Licence (L)</option>
-                                    <option value="Master">Master (M)</option>
-                                    <option value="Doctorat">Doctorat (D)</option>
-                                </select>
-                            </div>
-                            <div class="col-md-6">
-                                <label for="levelDuration" class="form-label">Durée (années) <span class="text-danger">*</span></label>
-                                <select class="form-select" id="levelDuration" name="duree" required>
-                                    <option value="">Choisir...</option>
-                                    <option value="1">1 an</option>
-                                    <option value="2">2 ans</option>
-                                    <option value="3">3 ans</option>
-                                    <option value="4">4 ans</option>
-                                </select>
-                            </div>
-                            <div class="col-md-6">
-                                <label for="levelCredits" class="form-label">Crédits requis <span class="text-danger">*</span></label>
-                                <input type="number" class="form-control" id="levelCredits" name="credits" min="30" max="180" required>
-                                <div class="form-text">Crédits ECTS nécessaires pour valider le niveau</div>
-                            </div>
-                            <div class="col-md-6">
-                                <label for="levelOrder" class="form-label">Ordre d'affichage</label>
-                                <input type="number" class="form-control" id="levelOrder" name="ordre" min="1" placeholder="1">
-                            </div>
-                            <div class="col-12">
-                                <label for="levelDescription" class="form-label">Description</label>
-                                <textarea class="form-control" id="levelDescription" name="description" rows="3" placeholder="Description du niveau d'étude"></textarea>
-                            </div>
-                            <div class="col-12">
-                                <label for="levelPrerequisites" class="form-label">Prérequis</label>
-                                <textarea class="form-control" id="levelPrerequisites" name="prerequis" rows="2" placeholder="Conditions d'accès au niveau"></textarea>
-                            </div>
-                            <div class="col-12">
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" id="levelActive" name="actif" checked>
-                                    <label class="form-check-label" for="levelActive">
-                                        Niveau actif (ouvert aux inscriptions)
-                                    </label>
-                                </div>
-                            </div>
-                        </div>
-                    </form>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
-                    <button type="button" class="btn btn-primary" onclick="saveLevel()">
-                        <i class="fas fa-save me-2"></i>Enregistrer
-                    </button>
-                </div>
+<div class="modal fade" id="addLevelModal" tabindex="-1" aria-labelledby="addLevelModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="addLevelModalLabel">
+          <i class="fas fa-plus me-2"></i>Ajouter un nouveau niveau d'étude
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <form id="addLevelForm" novalidate>
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label for="levelCode" class="form-label">Code <span class="text-danger">*</span></label>
+              <input type="text" class="form-control" id="levelCode" name="code" required>
+              <div class="form-text">Ex: L1, L2, M1, M2, D1...</div>
+              <div class="invalid-feedback">Le code est obligatoire.</div>
             </div>
-        </div>
+            <div class="col-md-6">
+              <label for="levelName" class="form-label">Nom du niveau <span class="text-danger">*</span></label>
+              <input type="text" class="form-control" id="levelName" name="lib_niv_etu" required>
+              <div class="invalid-feedback">Le nom du niveau est obligatoire.</div>
+            </div>
+            <div class="col-md-6">
+              <label for="levelCycle" class="form-label">Cycle <span class="text-danger">*</span></label>
+              <select class="form-select" id="levelCycle" name="cycle" required>
+                <option value="">Choisir...</option>
+                <option value="Licence">Licence (L)</option>
+                <option value="Master">Master (M)</option>
+                <option value="Doctorat">Doctorat (D)</option>
+              </select>
+              <div class="invalid-feedback">Le cycle est obligatoire.</div>
+            </div>
+            <div class="col-md-6">
+              <label for="levelDuration" class="form-label">Durée (années) <span class="text-danger">*</span></label>
+              <select class="form-select" id="levelDuration" name="duree" required>
+                <option value="">Choisir...</option>
+                <option value="1">1 an</option>
+                <option value="2">2 ans</option>
+                <option value="3">3 ans</option>
+                <option value="4">4 ans</option>
+              </select>
+              <div class="invalid-feedback">La durée est obligatoire.</div>
+            </div>
+            <div class="col-md-6">
+              <label for="levelCredits" class="form-label">Crédits requis <span class="text-danger">*</span></label>
+              <input type="number" class="form-control" id="levelCredits" name="credits" min="30" max="180" required>
+              <div class="form-text">Crédits ECTS nécessaires pour valider le niveau</div>
+              <div class="invalid-feedback">Veuillez saisir un nombre entre 30 et 180.</div>
+            </div>
+            <div class="col-md-6">
+              <label for="levelOrder" class="form-label">Ordre d'affichage</label>
+              <input type="number" class="form-control" id="levelOrder" name="ordre" min="1" placeholder="1">
+            </div>
+            <div class="col-12">
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="levelActive" name="actif" checked>
+                <label class="form-check-label" for="levelActive">
+                  Niveau actif (ouvert aux inscriptions)
+                </label>
+              </div>
+            </div>
+          </div>
+        </form>
+        <div id="addLevelAlert" class="alert d-none mt-3" role="alert"></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+        <button type="button" class="btn btn-primary" onclick="saveLevel()">
+          <i class="fas fa-save me-2"></i>Enregistrer
+        </button>
+      </div>
     </div>
+  </div>
+</div>
+
 
     <!-- View Level Modal -->
     <div class="modal fade" id="viewLevelModal" tabindex="-1" aria-labelledby="viewLevelModalLabel" aria-hidden="true">
@@ -749,31 +595,70 @@
 
         function saveLevel() {
             const form = document.getElementById('addLevelForm');
-            if (form.checkValidity()) {
-                console.log('Saving level...');
-                
-                const formData = new FormData(form);
-                
-                // Validate credits based on cycle
-                const cycle = formData.get('cycle');
-                const credits = parseInt(formData.get('credits'));
-                
-                if (cycle === 'Licence' && credits !== 60) {
-                    alert('Pour le cycle Licence, chaque niveau doit valoir 60 crédits ECTS.');
-                    return;
-                }
-                if (cycle === 'Master' && credits !== 60) {
-                    alert('Pour le cycle Master, chaque niveau doit valoir 60 crédits ECTS.');
-                    return;
-                }
-                
-                // Add save logic here
-                bootstrap.Modal.getInstance(document.getElementById('addLevelModal')).hide();
-                showNotification('Niveau d\'étude créé avec succès!', 'success');
-            } else {
-                form.reportValidity();
+            const alertBox = document.getElementById('addLevelAlert');
+
+            // Reset alert
+            alertBox.classList.add('d-none');
+            alertBox.textContent = '';
+
+            // Validation bootstrap custom
+            if (!form.checkValidity()) {
+                form.classList.add('was-validated');
+                return;
             }
+
+            // Préparer les données
+            const formData = new FormData(form);
+            // Checkbox non cochée n'envoie pas de valeur, donc forçons
+            if (!formData.has('actif')) {
+                formData.append('actif', 0);
+            } else {
+                formData.set('actif', 1);
+            }
+
+            fetch('../pages/ecrans_admin/ajout_niveau_etude.php', {
+                method: 'POST',
+                body: formData,
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                // Succès : fermer modal, reset form, refresh liste
+                const modalEl = document.getElementById('addLevelModal');
+                const modal = bootstrap.Modal.getInstance(modalEl);
+                modal.hide();
+                form.reset();
+                form.classList.remove('was-validated');
+
+                if (typeof refreshLevels === 'function') {
+                    refreshLevels();
+                }
+                } else {
+                alertBox.classList.remove('d-none');
+                alertBox.classList.add('alert-danger');
+                alertBox.textContent = data.message || 'Erreur lors de l\'enregistrement';
+                }
+            })
+            .catch(() => {
+                alertBox.classList.remove('d-none');
+                alertBox.classList.add('alert-danger');
+                alertBox.textContent = 'Erreur réseau ou serveur';
+            });
         }
+
+        function refreshLevels() {
+            fetch('pages/ecrans_admin/niveauetude.php')
+                .then(response => response.text())
+                .then(html => {
+                    const tbody = document.querySelector('#levelsTable tbody');
+                    tbody.innerHTML = html;
+                })
+                .catch(error => {
+                    console.error('Erreur lors du rafraîchissement des niveaux :', error);
+                });
+        }
+
+
 
         function addSpecialization() {
             const code = prompt('Code de la spécialisation:');

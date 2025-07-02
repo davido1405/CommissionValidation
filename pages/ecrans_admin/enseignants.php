@@ -301,14 +301,11 @@ $ensiegnants = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                             <button class="btn btn-sm btn-outline-warning" title="Modifier" onclick="loadTeacherToForm(<?= $ensiegnant['id_ens'] ?>)">
                                                 <i class="fas fa-edit"></i>
                                             </button>
-                                            <button class="btn btn-outline-secondary" onclick="window.currentTeacherId = <?= $ensiegnant['id_ens'] ?>; loadGradeAndFunctionHistory(<?= $ensiegnant['id_ens'] ?>); new bootstrap.Modal(document.getElementById('gradeFunctionModal')).show();">
-                                                <i class="fas fa-award me-1"></i>
-                                            </button>
-                                            <button class="btn btn-sm btn-outline-success" title="Voir Rapports" onclick="viewReports(<?= $ensiegnant['id_ens'] ?>)">
-                                                <i class="fas fa-file-alt"></i>
-                                            </button>
                                             <button class="btn btn-sm btn-outline-danger" title="Suspendre" onclick="suspendTeacher(<?= $ensiegnant['id_ens'] ?>)">
                                                 <i class="fas fa-user-times"></i>
+                                            </button>
+                                            <button class="btn btn-sm btn-outline-success" title="Réactiver" onclick="reactivateTeacher(<?= $ensiegnant['id_ens'] ?>)">
+                                                <i class="fas fa-user-check"></i>
                                             </button>
                                         </div>
                                     </td>
@@ -441,6 +438,98 @@ $ensiegnants = $stmt->fetchAll(PDO::FETCH_ASSOC);
         </div>
     </div>
 
+    <!-- Modal Bootstrap pour saisir la raison de suspension -->
+    <div class="modal fade" id="raisonSuspensionModal" tabindex="-1" aria-labelledby="raisonSuspensionLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <form id="raisonSuspensionForm" class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="raisonSuspensionLabel">Raison de la suspension</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="idEnsInput" name="id_ens" />
+                <div class="mb-3">
+                <label for="raisonInput" class="form-label">Raison</label>
+                <textarea id="raisonInput" name="raison" class="form-control" required></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="submit" class="btn btn-danger">Suspendre</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+            </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+        const raisonModal = new bootstrap.Modal(document.getElementById('raisonSuspensionModal'));
+
+        window.suspendTeacher = function(id_ens) {
+            console.log("Appel suspendTeacher id_ens =", id_ens);
+            document.getElementById('idEnsInput').value = id_ens;
+            document.getElementById('raisonInput').value = '';
+            raisonModal.show();
+        };
+
+        document.getElementById('raisonSuspensionForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const raison = document.getElementById('raisonInput').value.trim();
+            const id_ens = document.getElementById('idEnsInput').value;
+
+            if (!raison) {
+            alert("La raison de la suspension ne peut pas être vide.");
+            return;
+            }
+
+            fetch('../pages/ecrans_admin/suspension_activer_enseignant.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: `id_ens=${encodeURIComponent(id_ens)}&action=suspendre&raison=${encodeURIComponent(raison)}`
+            })
+            .then(response => {
+            if (!response.ok) throw new Error(`Erreur réseau (status ${response.status})`);
+            return response.json();
+            })
+            .then(data => {
+            alert(data.message || "Réponse reçue");
+            if (data.status === 'success') {
+                raisonModal.hide();
+                location.reload();
+            }
+            })
+            .catch(error => {
+            alert("Erreur lors de la suspension. Voir console pour détails.");
+            console.error("Erreur suspendTeacher:", error);
+            });
+        });
+
+        window.reactivateTeacher = function(id_ens) {
+            if (!confirm("Confirmez-vous la réactivation de cet enseignant ?")) return;
+
+            fetch('../pages/ecrans_admin/suspension_activer_enseignant.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: `id_ens=${encodeURIComponent(id_ens)}&action=reactiver`
+            })
+            .then(response => {
+            if (!response.ok) throw new Error(`Erreur réseau (status ${response.status})`);
+            return response.json();
+            })
+            .then(data => {
+            alert(data.message || "Réponse reçue");
+            if (data.status === 'success') {
+                location.reload();
+            }
+            })
+            .catch(error => {
+            alert("Erreur lors de la réactivation. Voir console pour détails.");
+            console.error("Erreur reactivateTeacher:", error);
+            });
+        };
+        });
+
+    </script>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
     <script>
@@ -667,7 +756,6 @@ $ensiegnants = $stmt->fetchAll(PDO::FETCH_ASSOC);
             };
             xhr.send();
         }
-
 
         //Gestion des messages d'erreur
         function handleTeacherSubmit(event) {

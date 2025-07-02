@@ -1,0 +1,12 @@
+2025-07-02 02:57:45 Début action: id_ens=2, action=suspendre, raison=Retard multiple
+2025-07-02 02:57:45 statut enseignant suspendu OK
+2025-07-02 02:57:45 insertion suspension OK
+2025-07-02 02:57:49 Début action: id_ens=2, action=reactiver, raison=null
+2025-07-02 02:57:49 statut enseignant réactivé OK
+2025-07-02 02:57:49 suspension clôturée OK
+2025-07-02 02:59:46 Début action: id_ens=3, action=suspendre, raison=C'est une femme 😂😂
+2025-07-02 02:59:46 statut enseignant suspendu OK
+2025-07-02 02:59:46 insertion suspension OK
+2025-07-02 03:00:05 Début action: id_ens=3, action=reactiver, raison=null
+2025-07-02 03:00:05 statut enseignant réactivé OK
+2025-07-02 03:00:05 suspension clôturée OK

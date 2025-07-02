@@ -19,15 +19,16 @@ $parPage = 10; // nombre d’étudiants par page
 $page = isset($_GET['page']) && is_numeric($_GET['page']) ? (int)$_GET['page'] : 1;
 $offset = ($page - 1) * $parPage;
 
-//Recupérer les étudiants automatiquement
 $stmt = $pdo->prepare("
-    SELECT e.num_etu, e.nom_etu, e.prenom_etu, e.dte_nais_etu, e.login_etu, e.statut_etu,
-           ne.lib_niv_etu, aa.dte_deb, aa.dte_fin
-    FROM (
+    WITH inscriptions AS (
         SELECT *,
-               ROW_NUMBER() OVER (PARTITION BY num_etu ORDER BY dte_insc DESC) AS rn
+               ROW_NUMBER() OVER (PARTITION BY num_etu ORDER BY dte_insc DESC, id_ac DESC) AS rn
         FROM inscrire
-    ) i
+    )
+    SELECT 
+        e.num_etu, e.nom_etu, e.prenom_etu, e.dte_nais_etu, e.login_etu, e.statut_etu,
+        ne.lib_niv_etu, aa.dte_deb, aa.dte_fin, i.montant_insc
+    FROM inscriptions i
     JOIN etudiant e ON e.num_etu = i.num_etu
     JOIN niveau_etude ne ON ne.id_niv_etu = i.id_niv_etu
     JOIN annee_academique aa ON aa.id_ac = i.id_ac
@@ -41,11 +42,11 @@ $stmt->bindValue(':parpage', $parPage, PDO::PARAM_INT);
 $stmt->execute();
 $etudiants = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-
 // Total des étudiants
-$totalStmt = $pdo->query("SELECT COUNT(*) FROM etudiant");
+$totalStmt = $pdo->query("SELECT COUNT(DISTINCT num_etu) FROM inscrire");
 $totalEtudiants = $totalStmt->fetchColumn();
 $totalPages = ceil($totalEtudiants / $parPage);
+
 
 // Générer un login unique (ex: etu168493@example.com)
 $prefix = "default";
@@ -57,7 +58,6 @@ $chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
 $mdpAuto = substr(str_shuffle($chars), 0, 8);
 
 ?>
-    
         <div class="content-area">
             <!-- Main Content Card -->
             <div class="dashboard-card">
@@ -74,6 +74,7 @@ $mdpAuto = substr(str_shuffle($chars), 0, 8);
                                 <form id="addStudentForm" method="POST" action="../pages/ecrans_admin/traitement_etudiant.php" onsubmit="return handleSubmit(event)">
                                     <input type="hidden" id="mode_formulaire" name="mode_formulaire" value="ajout">
                                     <input type="hidden" id="num_etu" name="num_etu" value="">
+                                    <input type="hidden" id="ancien_login" name="ancien_login" value="">
                                     <div class="row g-3">
                                         <div class="col-md-6">
                                             <label for="prenom_etu" class="form-label">Prénom <span class="text-danger">*</span></label>
@@ -135,8 +136,8 @@ $mdpAuto = substr(str_shuffle($chars), 0, 8);
                                     </div>
                                     <div class="modal-footer">
                                         <!--<input type="hidden" id="num_etu" name="num_etu" value="">-->
-                                        <button type="submit" class="btn btn-primary">
-                                            <i class="fas fa-save me-2"></i>Ajouter l'étudiant
+                                        <button type="submit" class="btn btn-primary" id="submitBtn">
+                                            <i class="fas fa-save me-2"></i><span id="submitText">Ajouter l'étudiant</span>
                                         </button>
                                     </div>
                                 </form>
@@ -395,49 +396,56 @@ $mdpAuto = substr(str_shuffle($chars), 0, 8);
 
     <!--Modifier informations de l'étudiant-->
     <script>
-        function loadEtudiantToForm(id) {
-            const xhr = new XMLHttpRequest();
-            xhr.open("GET", "../pages/ecrans_admin/voir_etudiant.php?id=" + id + "&json=1", true);
-            xhr.onload = function () {
-                if (xhr.status === 200) {
-                    try {
-                        const data = JSON.parse(xhr.responseText);
-
-                        if (data.error) {
-                            alert(data.error);
-                            return;
-                        }
-
-                        // On remplit les champs du formulaire avec les bons IDs
-                        document.getElementById("mode_formulaire").value = "modification";
-                        document.getElementById("num_etu").value = data.num_etu;
-                        document.getElementById("prenom_etu").value = data.prenom_etu;
-                        document.getElementById("nom_etu").value = data.nom_etu;
-                        document.getElementById("dte_nais_etu").value = data.dte_nais_etu;
-                        document.getElementById("login_etu").value = data.login_etu;
-                        document.getElementById("mdp_etu").value = data.mdp_util;
-                        document.getElementById("id_niv_etu").value = data.id_niv_etu;
-                        document.getElementById("id_ac").value = data.id_ac;
-                        document.getElementById("statut_etu").value = data.statut_etu;
-
-                        // Optionnel : scroll vers le formulaire
-                        document.getElementById("addStudentForm").scrollIntoView({ behavior: "smooth" });
-
-                    } catch (e) {
-                        console.error("Erreur JSON :", e);
-                        console.log("Réponse brute : ", xhr.responseText);
-                        alert("Erreur de traitement des données JSON.");
+        function loadEtudiantToForm(num_etu) {
+            fetch(`../pages/ecrans_admin/voir_etudiant.php?id=${num_etu}&json=1`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! Status: ${response.status}`);
                     }
-                } else {
-                    alert("Erreur serveur.");
-                }
-            };
-            xhr.onerror = function () {
-                alert("Erreur réseau.");
-            };
-            xhr.send();
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.error) {
+                        alert("Erreur : " + data.error);
+                        return;
+                    }
+
+                    document.getElementById('mode_formulaire').value = 'modification';
+                    document.getElementById('num_etu').value = data.num_etu ?? '';
+                    document.getElementById('ancien_login').value = data.login_etu ?? '';
+                    document.getElementById('prenom_etu').value = data.prenom_etu ?? '';
+                    document.getElementById('nom_etu').value = data.nom_etu ?? '';
+                    document.getElementById('dte_nais_etu').value = data.dte_nais_etu ?? '';
+                    document.getElementById('login_etu').value = data.login_etu ?? '';
+                    document.getElementById('statut_etu').value = data.statut_etu ?? '';
+                    document.getElementById('id_niv_etu').value = data.id_niv_etu ?? '';
+                    document.getElementById('id_ac').value = data.id_ac ?? '';
+                    document.getElementById('montant_insc').value = data.montant_insc ?? '';
+
+                    // Changement du texte du bouton si id submitText existe
+                    const submitBtn = document.getElementById('submitText');
+                    if (submitBtn) submitBtn.innerText = "Modifier l'étudiant";
+
+                    // Ouvrir la modale
+                    const modalElement = document.querySelector('.addStudentForm .modal');
+                    if (modalElement) {
+                        const modal = new bootstrap.Modal(modalElement);
+                        modal.show();
+
+                        // Scroll smooth vers la modale
+                        modalElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    } else {
+                        console.warn("Modal non trouvé !");
+                    }
+                })
+                .catch(err => {
+                    console.error("Erreur lors du chargement de l'étudiant :", err);
+                    alert("Erreur lors du chargement.");
+                });
         }
+
     </script>
+        
     <script>
         // Filter functions
         function filterStudents() {
