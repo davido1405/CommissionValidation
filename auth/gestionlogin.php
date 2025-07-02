@@ -31,13 +31,14 @@ try {
 
         // 7. Récupérer le rôle de l'utilisateur (groupe utilisateur)
         $stmtGroupe = $pdo->prepare("
-            SELECT gu.lib_gu 
-            FROM posseder p
-            INNER JOIN groupe_utilisateur gu ON gu.id_gu = p.id_gu
+            SELECT g.id_groupe, g.libelle
+            FROM groupe_utilisateur g
+            INNER JOIN posseder p ON g.id_groupe = p.id_groupe
             WHERE p.id_util = ?
+            LIMIT 1
         ");
         $stmtGroupe->execute([$user['id_util']]);
-        $groupe = $stmtGroupe->fetchColumn();
+        $groupe = $stmtGroupe->fetch(PDO::FETCH_ASSOC);
 
         if (!$groupe) {
             $_SESSION['error'] = "Aucun groupe associé à ce compte.";
@@ -45,24 +46,32 @@ try {
             exit;
         }
 
-        $_SESSION['role'] = (int)$groupe;
+        $_SESSION['role'] = (int)$groupe['id_groupe'];  // Numérique, parfait pour switch
+        $_SESSION['role_label'] = $groupe['libelle'];
+
+        error_log("Rôle ID : " . $_SESSION['role'] . " - Libellé : " . $_SESSION['role_label']);
 
         // 8. Redirection selon le rôle
         switch ($_SESSION['role']) {
-            case 1:
+            case 3: // Administrateur
+                header("Location: ../pages/admin_principale.php");
+                break;
+            case 1: // Gestionnaire académique
+            case 2: // Gestionnaire des rapports
                 header("Location: ../pages/admin.php");
                 break;
-            case 2:
-                header("Location: ../pages/enseignant.php");
-                break;
-            case 3:
+            case 4: // Étudiant
                 header("Location: ../pages/etudiant.php");
+                break;
+            case 5: // Enseignant
+                header("Location: ../pages/enseignant.php");
                 break;
             default:
                 $_SESSION['error'] = "Rôle non reconnu.";
                 header("Location: ../pages/login.php");
                 break;
         }
+
         exit;
     } else {
         $_SESSION['error'] = "Identifiants invalides.";

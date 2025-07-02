@@ -1,30 +1,30 @@
 <?php
-// session_start avant tout contenu
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-// Connexion base de données
 require_once '../config/db.php';
 
-$role = $_SESSION['role'] ?? 0; // Rôle utilisateur
+$role = $_SESSION['role'] ?? 0; // 0 = non connecté
 $page = $_GET['page'] ?? 'default';
-?>
 
+if ($role === 0) {
+    header("Location: ../login.php");
+    exit;
+}
+?>
 
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BDCOV - Espace Administrateur</title>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="../assets/css/styles.css">
-  
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>BDCOV - Tableau de bord Administrateur Principal</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet" />
+    <link rel="stylesheet" href="../assets/css/styles.css" />
 </head>
 <body>
-    <!-- Sidebar Navigation -->
     <div class="sidebar">
         <div class="logo-container">
             <h5 class="text-white m-0">VOTRE LOGO</h5>
@@ -34,9 +34,11 @@ $page = $_GET['page'] ?? 'default';
                 <i class="fas fa-tachometer-alt"></i> Tableau de bord
             </a>
 
-            <div class="nav-category">Gestion Académique</div>
-
-            <?php if (in_array($role, [1, 2])): // Gestionnaire administratif ou Admin ?>
+            <?php if ($role === 4): // Admin Principal ?>
+                <div class="nav-category">Gestion complète</div>
+                <a href="?page=utilisateurs" class="nav-link <?= ($page === 'utilisateurs') ? 'active' : '' ?>">
+                    <i class="fas fa-user-shield"></i> Gestion des Utilisateurs & Rôles
+                </a>
                 <a href="?page=etudiants" class="nav-link <?= ($page === 'etudiants') ? 'active' : '' ?>">
                     <i class="fas fa-user-graduate"></i> Étudiants
                 </a>
@@ -52,17 +54,11 @@ $page = $_GET['page'] ?? 'default';
                 <a href="?page=niveauetude" class="nav-link <?= ($page === 'niveauetude') ? 'active' : '' ?>">
                     <i class="fas fa-layer-group"></i> Niveaux d'étude
                 </a>
-            <?php endif; ?>
-
-            <?php if (in_array($role, [2])): // Gestionnaire rapports ou Admin ?>
-                <div class="nav-category">Gestion des Mémoires</div>
                 <a href="?page=rapports" class="nav-link <?= ($page === 'rapports') ? 'active' : '' ?>">
                     <i class="fas fa-file-alt"></i> Rapports
                 </a>
                 <a href="?page=validation" class="nav-link d-flex justify-content-between <?= ($page === 'validation') ? 'active' : '' ?>">
-                    <div>
-                        <i class="fas fa-tasks"></i> Validations
-                    </div>
+                    <div><i class="fas fa-tasks"></i> Validations</div>
                     <span class="badge bg-danger rounded-pill">12</span>
                 </a>
                 <a href="?page=jury" class="nav-link <?= ($page === 'jury') ? 'active' : '' ?>">
@@ -71,14 +67,6 @@ $page = $_GET['page'] ?? 'default';
                 <a href="?page=entreprise" class="nav-link <?= ($page === 'entreprise') ? 'active' : '' ?>">
                     <i class="fas fa-building"></i> Entreprises
                 </a>
-            <?php endif; ?>
-
-            <div class="nav-category">Administration</div>
-
-            <?php if (in_array($role, [2])): // Tous les gestionnaires ou admin ?>
-                <a href="?page=utilisateurs" class="nav-link <?= ($page === 'utilisateurs') ? 'active' : '' ?>">
-                    <i class="fas fa-user-shield"></i> Utilisateurs
-                </a>
                 <a href="?page=statistiques" class="nav-link <?= ($page === 'statistiques') ? 'active' : '' ?>">
                     <i class="fas fa-chart-bar"></i> Statistiques
                 </a>
@@ -86,7 +74,7 @@ $page = $_GET['page'] ?? 'default';
                     <i class="fas fa-history"></i> Journal d'Audit
                 </a>
                 <a href="?page=parametre" class="nav-link <?= ($page === 'parametre') ? 'active' : '' ?>">
-                    <i class="fas fa-cog"></i> Paramètres
+                    <i class="fas fa-cog"></i> Paramètres avancés
                 </a>
             <?php endif; ?>
 
@@ -96,11 +84,66 @@ $page = $_GET['page'] ?? 'default';
         </div>
     </div>
 
+    <div class="main-content p-4">
+        <?php if ($page === 'default' && $role === 4): ?>
+            <h1>Bienvenue Administrateur Principal</h1>
+            <p>Voici votre tableau de bord principal, avec accès complet à la gestion de la plateforme.</p>
 
-    <!-- Main Content Area -->
-    <div class="main-content">
-        <?php
-            $page=$_GET['page'] ?? 'default';
+            <div class="row g-4 mt-4">
+
+                <div class="col-md-4">
+                    <a href="?page=utilisateurs" class="btn btn-primary w-100 py-3 shadow-sm">
+                        <i class="fas fa-users-cog me-2"></i> Gérer les utilisateurs & rôles
+                    </a>
+                </div>
+
+                <div class="col-md-4">
+                    <a href="?page=etudiants" class="btn btn-success w-100 py-3 shadow-sm">
+                        <i class="fas fa-user-graduate me-2"></i> Gérer les étudiants
+                    </a>
+                </div>
+
+                <div class="col-md-4">
+                    <a href="?page=enseignants" class="btn btn-info w-100 py-3 shadow-sm">
+                        <i class="fas fa-chalkboard-teacher me-2"></i> Gérer les enseignants
+                    </a>
+                </div>
+
+                <div class="col-md-4">
+                    <a href="?page=ue" class="btn btn-warning w-100 py-3 shadow-sm">
+                        <i class="fas fa-book me-2"></i> Gérer les UE / ECUE
+                    </a>
+                </div>
+
+                <div class="col-md-4">
+                    <a href="?page=rapports" class="btn btn-secondary w-100 py-3 shadow-sm">
+                        <i class="fas fa-file-alt me-2"></i> Gérer les rapports
+                    </a>
+                </div>
+
+                <div class="col-md-4">
+                    <a href="?page=statistiques" class="btn btn-dark w-100 py-3 shadow-sm">
+                        <i class="fas fa-chart-bar me-2"></i> Voir les statistiques
+                    </a>
+                </div>
+
+                <div class="col-md-4">
+                    <a href="?page=parametre" class="btn btn-outline-primary w-100 py-3 shadow-sm">
+                        <i class="fas fa-cog me-2"></i> Paramètres avancés
+                    </a>
+                </div>
+
+                <div class="col-md-4">
+                    <a href="?page=journalaudi" class="btn btn-outline-secondary w-100 py-3 shadow-sm">
+                        <i class="fas fa-history me-2"></i> Journal d'audit
+                    </a>
+                </div>
+
+            </div>
+
+        <?php else: ?>
+            <?php
+            // Inclure les pages habituelles pour les autres vues
             switch($page){
                 case 'etudiants':
                     include('ecrans_gestionnaire/etudiants.php');
@@ -141,11 +184,13 @@ $page = $_GET['page'] ?? 'default';
                 case 'parametre':
                     include('ecrans_gestionnaire/parametre.php');
                     break;
-                case 'default':
+                default:
                     include('ecrans_gestionnaire/default.php');
                     break;
             }
-        ?>
+            ?>
+        <?php endif; ?>
     </div>
 
 </body>
+</html>

@@ -77,7 +77,7 @@ $ensiegnants = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                 </h5>
                             </div>
                             <div class="d-flex justify-content-between align-items-center mb-4">
-                                <form id="addTeacherForm" method="POST" action="../pages/ecrans_admin/traitement_enseignant.php" onsubmit="return handleTeacherSubmit(event)">
+                                <form id="addTeacherForm" method="POST" action="../pages/ecrans_gestionnaire/traitement_enseignant.php" onsubmit="return handleTeacherSubmit(event)">
                                     <input type="hidden" id="mode_formulaire" name="mode_formulaire" value="ajout">
                                     <input type="hidden" id="id_ens" name="id_ens" value="">
 
@@ -482,7 +482,7 @@ $ensiegnants = $stmt->fetchAll(PDO::FETCH_ASSOC);
             return;
             }
 
-            fetch('../pages/ecrans_admin/suspension_activer_enseignant.php', {
+            fetch('../pages/ecrans_gestionnaire/suspension_activer_enseignant.php', {
             method: 'POST',
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
             body: `id_ens=${encodeURIComponent(id_ens)}&action=suspendre&raison=${encodeURIComponent(raison)}`
@@ -507,7 +507,7 @@ $ensiegnants = $stmt->fetchAll(PDO::FETCH_ASSOC);
         window.reactivateTeacher = function(id_ens) {
             if (!confirm("Confirmez-vous la réactivation de cet enseignant ?")) return;
 
-            fetch('../pages/ecrans_admin/suspension_activer_enseignant.php', {
+            fetch('../pages/ecrans_gestionnaire/suspension_activer_enseignant.php', {
             method: 'POST',
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
             body: `id_ens=${encodeURIComponent(id_ens)}&action=reactiver`
@@ -564,7 +564,7 @@ $ensiegnants = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
         //Gérer grade et fonction
         function loadGradeAndFunctionHistory(enseignantId) {
-            fetch(`../pages/ecrans_admin/voir_grade_fonction.php?id=${enseignantId}`)
+            fetch(`../pages/ecrans_gestionnaire/voir_grade_fonction.php?id=${enseignantId}`)
                 .then(response => response.json())
                 .then(data => {
                     if (data.error) {
@@ -656,7 +656,7 @@ $ensiegnants = $stmt->fetchAll(PDO::FETCH_ASSOC);
             const formData = new FormData(event.target);
             formData.append('id_ens', window.currentTeacherId);
 
-            fetch('../pages/ecrans_admin/ajouter_grade.php', {
+            fetch('../pages/ecrans_gestionnaire/ajouter_grade.php', {
                 method: 'POST',
                 body: formData
             }).then(res => res.json())
@@ -674,7 +674,7 @@ $ensiegnants = $stmt->fetchAll(PDO::FETCH_ASSOC);
             const formData = new FormData(event.target);
             formData.append('id_ens', window.currentTeacherId);
 
-            fetch('../pages/ecrans_admin/ajouter_fonction.php', {
+            fetch('../pages/ecrans_gestionnaire/ajouter_fonction.php', {
                 method: 'POST',
                 body: formData
             }).then(res => res.json())
@@ -690,7 +690,7 @@ $ensiegnants = $stmt->fetchAll(PDO::FETCH_ASSOC);
         // Teacher management functions
         function viewTeacher(id) {
             const xhr = new XMLHttpRequest();
-            xhr.open("GET", "../pages/ecrans_admin/voir_enseignant.php?id=" + id, true);
+            xhr.open("GET", "../pages/ecrans_gestionnaire/voir_enseignant.php?id=" + id, true);
             xhr.onload = function () {
                 if (xhr.status === 200) {
                     document.getElementById("teacherDetailsContent").innerHTML = xhr.responseText;
@@ -709,7 +709,7 @@ $ensiegnants = $stmt->fetchAll(PDO::FETCH_ASSOC);
         //Remplir formulaire pour modification
         function loadTeacherToForm(id) {
             const xhr = new XMLHttpRequest();
-            xhr.open("GET", "../pages/ecrans_admin/voir_enseignant.php?id=" + id + "&json=1", true);
+            xhr.open("GET", "../pages/ecrans_gestionnaire/voir_enseignant.php?id=" + id + "&json=1", true);
             xhr.onload = function () {
                 if (xhr.status === 200) {
                     try {
@@ -764,7 +764,7 @@ $ensiegnants = $stmt->fetchAll(PDO::FETCH_ASSOC);
             const form = document.getElementById('addTeacherForm');
             const formData = new FormData(form);
 
-            fetch('../pages/ecrans_admin/traitement_enseignant.php', {
+            fetch('../pages/ecrans_gestionnaire/traitement_enseignant.php', {
                 method: 'POST',
                 body: formData
             })

@@ -616,7 +616,7 @@ function statutLabel(int $actif): array {
                 formData.set('actif', 1);
             }
 
-            fetch('../pages/ecrans_admin/ajout_niveau_etude.php', {
+            fetch('../pages/ecrans_gestionnaire/ajout_niveau_etude.php', {
                 method: 'POST',
                 body: formData,
             })
@@ -647,7 +647,7 @@ function statutLabel(int $actif): array {
         }
 
         function refreshLevels() {
-            fetch('pages/ecrans_admin/niveauetude.php')
+            fetch('pages/ecrans_gestionnaire/niveauetude.php')
                 .then(response => response.text())
                 .then(html => {
                     const tbody = document.querySelector('#levelsTable tbody');

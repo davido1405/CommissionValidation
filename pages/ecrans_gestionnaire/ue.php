@@ -27,7 +27,7 @@ error_reporting(E_ALL);
                                 </h5>
                             </div>
                             <div class="modal-body">
-                                <form id="addUeForm" method="POST" action="../pages/ecrans_admin/traitement_ue_ecue.php" onsubmit="return handleUeSubmit(event)">
+                                <form id="addUeForm" method="POST" action="../pages/ecrans_gestionnaire/traitement_ue_ecue.php" onsubmit="return handleUeSubmit(event)">
                                     <input type="hidden" name="mode_formulaire" id="mode_formulaire" value="ajout_ue">
                                     <input type="hidden" name="id_ue" id="id_ue" value="">
 
@@ -115,7 +115,7 @@ error_reporting(E_ALL);
                                 </h5>
                             </div>
                             <div class="modal-body">
-                                <form id="addEcueForm" method="POST" action="../pages/ecrans_admin/traitement_ue_ecue.php" onsubmit="return handleEcueSubmit(event)">
+                                <form id="addEcueForm" method="POST" action="../pages/ecrans_gestionnaire/traitement_ue_ecue.php" onsubmit="return handleEcueSubmit(event)">
                                     <input type="hidden" name="mode_formulaire" value="ajout_ecue">
 
                                     <div class="row g-3">
@@ -598,7 +598,7 @@ error_reporting(E_ALL);
 
         function viewUE(id) {
             const xhr = new XMLHttpRequest();
-            xhr.open("GET", "../pages/ecrans_admin/voir_ue.php?id=" + id, true);
+            xhr.open("GET", "../pages/ecrans_gestionnaire/voir_ue.php?id=" + id, true);
             xhr.onload = function () {
                 if (xhr.status === 200) {
                     document.getElementById("ueDetailContent").innerHTML = xhr.responseText;
@@ -618,7 +618,7 @@ error_reporting(E_ALL);
 
 
         function editUE(id) {
-            fetch(`../pages/ecrans_admin/voir_ue.php?id=${id}&json=1`)
+            fetch(`../pages/ecrans_gestionnaire/voir_ue.php?id=${id}&json=1`)
                 .then(response => response.json())
                 .then(data => {
                     if (data.status === 'success') {
@@ -656,7 +656,7 @@ error_reporting(E_ALL);
 
         function deleteUE(id) {
             if (confirm('Êtes-vous sûr de vouloir supprimer cette UE ? Toutes les ECUE associées seront également supprimées.')) {
-                fetch(`../pages/ecrans_admin/supprimer_UE_ECUE.php?id=${id}`, { method: 'GET' })
+                fetch(`../pages/ecrans_gestionnaire/supprimer_UE_ECUE.php?id=${id}`, { method: 'GET' })
                     .then(response => response.json())
                     .then(data => {
                         showToast(data.message, data.status === 'success' ? 'success' : 'error');
@@ -695,7 +695,7 @@ error_reporting(E_ALL);
 
         function viewECUE(id) {
             const xhr = new XMLHttpRequest();
-            xhr.open("GET", "../pages/ecrans_admin/voir_ecue.php?id=" + id, true);
+            xhr.open("GET", "../pages/ecrans_gestionnaire/voir_ecue.php?id=" + id, true);
             xhr.onload = function () {
                 if (xhr.status === 200) {
                     document.getElementById("ecueDetailContent").innerHTML = xhr.responseText;
@@ -711,7 +711,7 @@ error_reporting(E_ALL);
         }
 
         function editECUE(id) {
-            fetch(`../pages/ecrans_admin/voir_ecue.php?id=${id}&json=1`)
+            fetch(`../pages/ecrans_gestionnaire/voir_ecue.php?id=${id}&json=1`)
                 .then(response => response.json())
                 .then(data => {
                     if (data.status === 'success') {
@@ -749,7 +749,7 @@ error_reporting(E_ALL);
 
         function deleteECUE(id) {
             if (confirm('Êtes-vous sûr de vouloir supprimer cette ECUE ?')) {
-                fetch(`../pages/ecrans_admin/supprimer_ecue.php?id=${id}`, { method: 'GET' })
+                fetch(`../pages/ecrans_gestionnaire/supprimer_ecue.php?id=${id}`, { method: 'GET' })
                     .then(response => response.json())
                     .then(data => {
                         showToast(data.message, data.status === 'success' ? 'success' : 'error');

@@ -2,25 +2,32 @@
 require_once '../config/db.php';
 if (session_status() === PHP_SESSION_NONE) session_start();
 
-// Vérifier la connexion
+// Vérifie que l'utilisateur est connecté
 if (!isset($_SESSION['id_util'])) {
     header("Location: ../login.php");
     exit;
 }
 
-$idAdmin = $_SESSION['id_util']; // ou $_SESSION['id_pers'] si tu as un identifiant propre
+// Ici, on récupère l'id_util de la session (OK)
+$idUtil = $_SESSION['id_util'];
 
-// Récupérer les infos de l'administrateur
-$stmt = $pdo->prepare("SELECT * FROM personnel_admin WHERE id_pers = ?");
-$stmt->execute([$idAdmin]);
+// Récupérer les infos du personnel administratif via id_util (et non id_pers)
+$stmt = $pdo->prepare("SELECT * FROM personnel_admin WHERE id_util = ?");
+$stmt->execute([$idUtil]);
 $admin = $stmt->fetch(PDO::FETCH_ASSOC);
 
-// Récupérer les notifications non lues
+if (!$admin) {
+    die("Personnel administratif non trouvé pour cet utilisateur.");
+}
+
+// Exemple d'accès sécurisé au nom
+
+// Récupérer le nombre de notifications non lues pour cet utilisateur
 $stmtNotif = $pdo->prepare("SELECT COUNT(*) FROM notification WHERE id_util = ? AND statut = 'non_lue'");
-$stmtNotif->execute([$idAdmin]);
+$stmtNotif->execute([$idUtil]);
 $nbNotifications = $stmtNotif->fetchColumn();
 
-// Détails des dernières notifications
+// Récupérer les détails des dernières notifications non lues
 $stmtDetails = $pdo->prepare("
     SELECT titre, contenu, type_notif, date_notif 
     FROM notification 
@@ -28,13 +35,64 @@ $stmtDetails = $pdo->prepare("
     ORDER BY date_notif DESC 
     LIMIT 5
 ");
-$stmtDetails->execute([$idAdmin]);
+$stmtDetails->execute([$idUtil]);
 $notifications = $stmtDetails->fetchAll(PDO::FETCH_ASSOC);
+
+
+$role = $_SESSION['role'] ?? 0; // Rôle utilisateur
+$page = $_GET['page'] ?? 'default';
+
+
+// Étudiants total
+$query = "SELECT COUNT(*) AS total_etudiants FROM etudiant";
+$result = $pdo->query($query);
+$etudiants = $result->fetch(PDO::FETCH_ASSOC)['total_etudiants'] ?? 0;
+
+// Exemple d'évolution: calculer le nb étudiants ce semestre vs précédent (exemple simplifié)
+// Supposons une colonne 'date_inscription' dans etudiant
+$query = "SELECT COUNT(*) AS semestre_actuel FROM etudiant WHERE date_inscription >= DATE_SUB(CURDATE(), INTERVAL 6 MONTH)";
+$result = $pdo->query($query);
+$etudiants_semestre = $result->fetch(PDO::FETCH_ASSOC)['semestre_actuel'] ?? 0;
+
+// Pourcentage d'évolution (simplifié)
+$evo_etudiants = $etudiants > 0 ? round((($etudiants_semestre / $etudiants) - 1) * 100, 1) : 0;
+
+// Enseignants total
+$query = "SELECT COUNT(*) AS total_enseignants FROM enseignant";
+$result = $pdo->query($query);
+$enseignants = $result->fetch(PDO::FETCH_ASSOC)['total_enseignants'] ?? 0;
+
+// Nouveaux enseignants (exemple 3 derniers mois)
+$query = "SELECT COUNT(*) AS nouveaux_enseignants FROM enseignant WHERE date_recrutement >= DATE_SUB(CURDATE(), INTERVAL 3 MONTH)";
+$result = $pdo->query($query);
+$nouveaux_enseignants = $result->fetch(PDO::FETCH_ASSOC)['nouveaux_enseignants'] ?? 0;
+
+// Rapports actifs
+// On suppose un champ 'etat' = 'actif' ou 'en_attente'
+$query = "SELECT COUNT(*) AS total_rapports FROM rapport WHERE etat = 'actif'";
+$result = $pdo->query($query);
+$rapports_actifs = $result->fetch(PDO::FETCH_ASSOC)['total_rapports'] ?? 0;
+
+// Rapports en attente
+$query = "SELECT COUNT(*) AS rapports_attente FROM rapport WHERE etat = 'en_attente'";
+$result = $pdo->query($query);
+$rapports_attente = $result->fetch(PDO::FETCH_ASSOC)['rapports_attente'] ?? 0;
+
+// Jurys formés (distincts)
+$query = "SELECT COUNT(DISTINCT id_jury) AS total_jurys FROM jury_etudiant";
+$result = $pdo->query($query);
+$jurys = $result->fetch(PDO::FETCH_ASSOC)['total_jurys'] ?? 0;
+
+// Soutenances planifiées (exemple date > aujourd'hui)
+$query = "SELECT COUNT(*) AS soutenances_planifiees FROM jury WHERE date_soutenance >= CURDATE()";
+$result = $pdo->query($query);
+$soutenances = $result->fetch(PDO::FETCH_ASSOC)['soutenances_planifiees'] ?? 0;
+
 ?>
 
         
         
-        <div class="header">
+<div class="header">
     <div class="d-flex align-items-center">
         <h2 class="page-title">
             <i class="fas fa-tachometer-alt me-2"></i>
@@ -48,17 +106,19 @@ $notifications = $stmtDetails->fetchAll(PDO::FETCH_ASSOC);
     <div class="d-flex align-items-center gap-4">
         <div class="d-none d-md-flex align-items-center">
             <span class="text-dark me-3">
-                Bienvenue, <strong><?= $admin['prenoms_pers'] . ' ' . $admin['nom_pers'] ?></strong>
+                Bienvenue, <strong><?= htmlspecialchars($admin['prenoms_pers'] . ' ' .$admin['nom_pers']) ?></strong>
             </span>
         </div>
 
         <div class="dropdown me-3">
             <a class="btn btn-light position-relative rounded-circle p-2" href="#" role="button" id="notificationDropdown" data-bs-toggle="dropdown" aria-expanded="false">
                 <i class="fas fa-bell"></i>
-                <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
-                    <?= $nbNotifications ?>
-                    <span class="visually-hidden">nouvelles notifications</span>
-                </span>
+                <?php if ($nbNotifications > 0): ?>
+                    <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+                        <?= intval($nbNotifications) ?>
+                        <span class="visually-hidden">nouvelles notifications</span>
+                    </span>
+                <?php endif; ?>
             </a>
             <ul class="dropdown-menu dropdown-menu-end shadow" aria-labelledby="notificationDropdown" style="min-width: 320px;">
                 <li><h6 class="dropdown-header bg-light py-3">Notifications</h6></li>
@@ -67,22 +127,24 @@ $notifications = $stmtDetails->fetchAll(PDO::FETCH_ASSOC);
                     <li class="px-3 py-2 text-muted small">Aucune notification récente.</li>
                 <?php else: ?>
                     <?php foreach ($notifications as $notif): ?>
-                        <li><a class="dropdown-item py-3 border-bottom" href="#">
-                            <div class="d-flex align-items-center">
-                                <div class="flex-shrink-0">
-                                    <div class="bg-<?= 
-                                        $notif['type_notif'] === 'alerte' ? 'danger' : 
-                                        ($notif['type_notif'] === 'succès' ? 'success' : 'primary') 
-                                    ?> text-white rounded-circle p-2">
-                                        <i class="fas fa-bell"></i>
+                        <li>
+                            <a class="dropdown-item py-3 border-bottom" href="#">
+                                <div class="d-flex align-items-center">
+                                    <div class="flex-shrink-0">
+                                        <div class="bg-<?= 
+                                            $notif['type_notif'] === 'alerte' ? 'danger' : 
+                                            ($notif['type_notif'] === 'succès' ? 'success' : 'primary') 
+                                        ?> text-white rounded-circle p-2">
+                                            <i class="fas fa-bell"></i>
+                                        </div>
+                                    </div>
+                                    <div class="flex-grow-1 ms-3">
+                                        <p class="mb-0 fw-bold"><?= htmlspecialchars($notif['titre']) ?></p>
+                                        <small class="text-muted"><?= date('d/m/Y H:i', strtotime($notif['date_notif'])) ?></small>
                                     </div>
                                 </div>
-                                <div class="flex-grow-1 ms-3">
-                                    <p class="mb-0 fw-bold"><?= htmlspecialchars($notif['titre']) ?></p>
-                                    <small class="text-muted"><?= date('d/m/Y H:i', strtotime($notif['date_notif'])) ?></small>
-                                </div>
-                            </div>
-                        </a></li>
+                            </a>
+                        </li>
                     <?php endforeach; ?>
                 <?php endif; ?>
 
@@ -90,6 +152,7 @@ $notifications = $stmtDetails->fetchAll(PDO::FETCH_ASSOC);
                 <li><a class="dropdown-item text-center py-2" href="#">Voir toutes les notifications</a></li>
             </ul>
         </div>
+
 
         <div class="dropdown">
             <a class="btn btn-outline-dark d-flex align-items-center" href="#" role="button" id="userDropdown" data-bs-toggle="dropdown" aria-expanded="false">
@@ -100,7 +163,7 @@ $notifications = $stmtDetails->fetchAll(PDO::FETCH_ASSOC);
                 <i class="fas fa-chevron-down ms-2 d-none d-md-inline"></i>
             </a>
             <ul class="dropdown-menu dropdown-menu-end shadow" aria-labelledby="userDropdown">
-                <li><div class="dropdown-header bg-light py-3"><?= htmlspecialchars($admin['prenoms_admin'] . ' ' . $admin['nom_admin']) ?></div></li>
+                <li><div class="dropdown-header bg-light py-3"><?= htmlspecialchars($admin['prenoms_pers'] . ' ' . $admin['nom_pers']) ?></div></li>
                 <li><a class="dropdown-item py-2" href="#"><i class="fas fa-user-circle me-2"></i>Mon profil</a></li>
                 <li><a class="dropdown-item py-2" href="#"><i class="fas fa-cog me-2"></i>Paramètres</a></li>
                 <li><a class="dropdown-item py-2" href="#"><i class="fas fa-question-circle me-2"></i>Aide</a></li>
@@ -122,9 +185,10 @@ $notifications = $stmtDetails->fetchAll(PDO::FETCH_ASSOC);
                                 <i class="fas fa-user-graduate"></i>
                             </div>
                             <div class="stats-title">Étudiants</div>
-                            <div class="stats-number">482</div>
+                            <div class="stats-number"><?= $etudiants ?></div>
                             <div class="stats-trend">
-                                <i class="fas fa-arrow-up"></i> +8% ce semestre
+                                <i class="fas <?= ($evo_etudiants >= 0) ? 'fa-arrow-up text-success' : 'fa-arrow-down text-danger' ?>"></i>
+                                <?= abs($evo_etudiants) ?>% ce semestre
                             </div>
                         </div>
                     </div>
@@ -136,42 +200,45 @@ $notifications = $stmtDetails->fetchAll(PDO::FETCH_ASSOC);
                                 <i class="fas fa-chalkboard-teacher"></i>
                             </div>
                             <div class="stats-title">Enseignants</div>
-                            <div class="stats-number">56</div>
+                            <div class="stats-number"><?= $enseignants ?></div>
                             <div class="stats-trend">
-                                <i class="fas fa-arrow-up"></i> +3 nouveaux
+                                <i class="fas fa-arrow-up text-success"></i> <?= $nouveaux_enseignants ?> nouveaux ce trimestre
                             </div>
                         </div>
                     </div>
                 </div>
-                <div class="col-md-3">
-                    <div class="stats-card h-100">
-                        <div class="stats-card-content">
-                            <div class="stats-icon">
-                                <i class="fas fa-file-alt"></i>
-                            </div>
-                            <div class="stats-title">Rapports actifs</div>
-                            <div class="stats-number">124</div>
-                            <div class="stats-trend">
-                                <i class="fas fa-circle text-warning"></i> 12 en attente
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="stats-card h-100">
-                        <div class="stats-card-content">
-                            <div class="stats-icon">
-                                <i class="fas fa-user-shield"></i>
-                            </div>
-                            <div class="stats-title">Jurys formés</div>
-                            <div class="stats-number">24</div>
-                            <div class="stats-trend">
-                                <i class="fas fa-circle text-success"></i> 8 soutenances planifiées
+                <?php if (in_array($role, [2])): // Gestionnaire rapports ?>
+                    <div class="col-md-3">
+                        <div class="stats-card h-100">
+                            <div class="stats-card-content">
+                                <div class="stats-icon">
+                                    <i class="fas fa-file-alt"></i>
+                                </div>
+                                <div class="stats-title">Rapports actifs</div>
+                                <div class="stats-number"><?= $rapports_actifs ?></div>
+                                <div class="stats-trend">
+                                    <i class="fas fa-circle text-warning"></i> <?= $rapports_attente ?> en attente
+                                </div>
                             </div>
                         </div>
                     </div>
-                </div>
+                    <div class="col-md-3">
+                        <div class="stats-card h-100">
+                            <div class="stats-card-content">
+                                <div class="stats-icon">
+                                    <i class="fas fa-user-shield"></i>
+                                </div>
+                                <div class="stats-title">Jurys formés</div>
+                                <div class="stats-number"><?= $jurys ?></div>
+                                <div class="stats-trend">
+                                    <i class="fas fa-circle text-success"></i> <?= $soutenances ?> soutenances planifiées
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                <?php endif; ?>
             </div>
+
             
             <!-- Quick Actions Row -->
             <div class="row g-4 mb-4">

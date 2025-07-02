@@ -71,7 +71,7 @@ $mdpAuto = substr(str_shuffle($chars), 0, 8);
                                 </h5>
                             </div>
                             <div class="d-flex justify-content-between align-items-center mb-4">
-                                <form id="addStudentForm" method="POST" action="../pages/ecrans_admin/traitement_etudiant.php" onsubmit="return handleSubmit(event)">
+                                <form id="addStudentForm" method="POST" action="../pages/ecrans_gestionnaire/traitement_etudiant.php" onsubmit="return handleSubmit(event)">
                                     <input type="hidden" id="mode_formulaire" name="mode_formulaire" value="ajout">
                                     <input type="hidden" id="num_etu" name="num_etu" value="">
                                     <input type="hidden" id="ancien_login" name="ancien_login" value="">
@@ -379,7 +379,7 @@ $mdpAuto = substr(str_shuffle($chars), 0, 8);
     <script>
         function loadEtudiantDetails(id) {
             const xhr = new XMLHttpRequest();
-            xhr.open("GET", "../pages/ecrans_admin/voir_etudiant.php?id=" + id, true);
+            xhr.open("GET", "../pages/ecrans_gestionnaire/voir_etudiant.php?id=" + id, true);
             xhr.onload = function () {
                 if (xhr.status === 200) {
                     document.getElementById("contenuEtudiant").innerHTML = xhr.responseText;
@@ -397,7 +397,7 @@ $mdpAuto = substr(str_shuffle($chars), 0, 8);
     <!--Modifier informations de l'étudiant-->
     <script>
         function loadEtudiantToForm(num_etu) {
-            fetch(`../pages/ecrans_admin/voir_etudiant.php?id=${num_etu}&json=1`)
+            fetch(`../pages/ecrans_gestionnaire/voir_etudiant.php?id=${num_etu}&json=1`)
                 .then(response => {
                     if (!response.ok) {
                         throw new Error(`HTTP error! Status: ${response.status}`);
@@ -508,7 +508,7 @@ $mdpAuto = substr(str_shuffle($chars), 0, 8);
             const form = document.getElementById('addStudentForm');
             const formData = new FormData(form);
 
-            fetch('../pages/ecrans_admin/traitement_etudiant.php', {
+            fetch('../pages/ecrans_gestionnaire/traitement_etudiant.php', {
                 method: 'POST',
                 body: formData
             })
@@ -545,7 +545,7 @@ $mdpAuto = substr(str_shuffle($chars), 0, 8);
         function deleteStudent(id) {
             if (!confirm('Êtes-vous sûr de vouloir supprimer cet étudiant ?')) return;
 
-            fetch('../pages/ecrans_admin/supprimer_etudiant.php', {
+            fetch('../pages/ecrans_gestionnaire/supprimer_etudiant.php', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                 body: 'id=' + encodeURIComponent(id)
@@ -602,7 +602,7 @@ $mdpAuto = substr(str_shuffle($chars), 0, 8);
             const formData = new FormData(form);
 
             // ✅ Un seul fetch bien structuré
-            fetch('../pages/ecrans_admin/traitement_etudiant.php', {
+            fetch('../pages/ecrans_gestionnaire/traitement_etudiant.php', {
                 method: 'POST',
                 body: formData
             })
@@ -676,7 +676,7 @@ $mdpAuto = substr(str_shuffle($chars), 0, 8);
             const formData = new FormData();
             formData.append('file', file);
 
-            fetch('../pages/ecrans_admin/import_etudiants.php', {
+            fetch('../pages/ecrans_gestionnaire/import_etudiants.php', {
                 method: 'POST',
                 body: formData
             })
