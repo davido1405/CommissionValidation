@@ -43,50 +43,22 @@ $role = $_SESSION['role'] ?? 0; // Rôle utilisateur
 $page = $_GET['page'] ?? 'default';
 
 
-// Étudiants total
-$query = "SELECT COUNT(*) AS total_etudiants FROM etudiant";
-$result = $pdo->query($query);
-$etudiants = $result->fetch(PDO::FETCH_ASSOC)['total_etudiants'] ?? 0;
+// Étudiants total (distinct num_etu dans inscrire)
+$query = "SELECT COUNT(DISTINCT num_etu) AS total_etudiants FROM inscrire";
+$etudiants = $pdo->query($query)->fetch(PDO::FETCH_ASSOC)['total_etudiants'] ?? 0;
 
-// Exemple d'évolution: calculer le nb étudiants ce semestre vs précédent (exemple simplifié)
-// Supposons une colonne 'date_inscription' dans etudiant
-$query = "SELECT COUNT(*) AS semestre_actuel FROM etudiant WHERE date_inscription >= DATE_SUB(CURDATE(), INTERVAL 6 MONTH)";
-$result = $pdo->query($query);
-$etudiants_semestre = $result->fetch(PDO::FETCH_ASSOC)['semestre_actuel'] ?? 0;
-
-// Pourcentage d'évolution (simplifié)
-$evo_etudiants = $etudiants > 0 ? round((($etudiants_semestre / $etudiants) - 1) * 100, 1) : 0;
+// Étudiants inscrits ces 6 derniers mois
+$query = "SELECT COUNT(DISTINCT num_etu) AS recent_etudiants FROM inscrire WHERE dte_insc >= DATE_SUB(CURDATE(), INTERVAL 6 MONTH)";
+$etudiants_recent = $pdo->query($query)->fetch(PDO::FETCH_ASSOC)['recent_etudiants'] ?? 0;
 
 // Enseignants total
 $query = "SELECT COUNT(*) AS total_enseignants FROM enseignant";
-$result = $pdo->query($query);
-$enseignants = $result->fetch(PDO::FETCH_ASSOC)['total_enseignants'] ?? 0;
-
-// Nouveaux enseignants (exemple 3 derniers mois)
-$query = "SELECT COUNT(*) AS nouveaux_enseignants FROM enseignant WHERE date_recrutement >= DATE_SUB(CURDATE(), INTERVAL 3 MONTH)";
-$result = $pdo->query($query);
-$nouveaux_enseignants = $result->fetch(PDO::FETCH_ASSOC)['nouveaux_enseignants'] ?? 0;
+$enseignants = $pdo->query($query)->fetch(PDO::FETCH_ASSOC)['total_enseignants'] ?? 0;
 
 // Rapports actifs
-// On suppose un champ 'etat' = 'actif' ou 'en_attente'
-$query = "SELECT COUNT(*) AS total_rapports FROM rapport WHERE etat = 'actif'";
-$result = $pdo->query($query);
-$rapports_actifs = $result->fetch(PDO::FETCH_ASSOC)['total_rapports'] ?? 0;
+$query = "SELECT COUNT(*) AS rapports_actifs FROM rapport_etudiant WHERE etat_validation = 'actif'";
+$rapports = $pdo->query($query)->fetch(PDO::FETCH_ASSOC)['rapports_actifs'] ?? 0;
 
-// Rapports en attente
-$query = "SELECT COUNT(*) AS rapports_attente FROM rapport WHERE etat = 'en_attente'";
-$result = $pdo->query($query);
-$rapports_attente = $result->fetch(PDO::FETCH_ASSOC)['rapports_attente'] ?? 0;
-
-// Jurys formés (distincts)
-$query = "SELECT COUNT(DISTINCT id_jury) AS total_jurys FROM jury_etudiant";
-$result = $pdo->query($query);
-$jurys = $result->fetch(PDO::FETCH_ASSOC)['total_jurys'] ?? 0;
-
-// Soutenances planifiées (exemple date > aujourd'hui)
-$query = "SELECT COUNT(*) AS soutenances_planifiees FROM jury WHERE date_soutenance >= CURDATE()";
-$result = $pdo->query($query);
-$soutenances = $result->fetch(PDO::FETCH_ASSOC)['soutenances_planifiees'] ?? 0;
 
 ?>
 
