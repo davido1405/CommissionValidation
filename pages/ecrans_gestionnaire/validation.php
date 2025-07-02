@@ -1,84 +1,99 @@
+<?php
+require_once (__DIR__ . '/../../config/db.php');
 
-        <div class="header">
-            <div class="d-flex align-items-center">
-                <h2 class="page-title">
-                    <i class="fas fa-tasks me-2"></i>
-                    Validation des Rapports
-                </h2>
-                <div class="ms-4 d-none d-md-block">
-                    <span class="badge bg-success p-2">Année académique: 2024-2025</span>
-                </div>
-            </div>
-            
-            <div class="d-flex align-items-center gap-4">
-                <div class="d-none d-md-flex align-items-center">
-                    <span class="text-dark me-3">Bienvenue, <strong>Thomas Bernard</strong></span>
-                </div>
-                <div class="dropdown me-3">
-                    <a class="btn btn-light position-relative rounded-circle p-2" href="#" role="button" id="notificationDropdown" data-bs-toggle="dropdown" aria-expanded="false">
-                        <i class="fas fa-bell"></i>
-                        <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
-                            4
-                            <span class="visually-hidden">nouvelles notifications</span>
-                        </span>
-                    </a>
-                    <ul class="dropdown-menu dropdown-menu-end shadow" aria-labelledby="notificationDropdown" style="min-width: 320px;">
-                        <li><h6 class="dropdown-header bg-light py-3">Notifications</h6></li>
-                        <li><a class="dropdown-item py-3 border-bottom" href="#">
-                            <div class="d-flex align-items-center">
-                                <div class="flex-shrink-0">
-                                    <div class="bg-warning text-white rounded-circle p-2">
-                                        <i class="fas fa-exclamation-triangle"></i>
-                                    </div>
-                                </div>
-                                <div class="flex-grow-1 ms-3">
-                                    <p class="mb-0 fw-bold">Délai de validation dépassé</p>
-                                    <small class="text-muted">3 rapports en retard</small>
-                                </div>
-                            </div>
-                        </a></li>
-                        <li><hr class="dropdown-divider"></li>
-                        <li><a class="dropdown-item text-center py-2" href="#">Voir toutes les notifications</a></li>
-                    </ul>
-                </div>
-                <div class="dropdown">
-                    <a class="btn btn-outline-dark d-flex align-items-center" href="#" role="button" id="userDropdown" data-bs-toggle="dropdown" aria-expanded="false">
-                        <div class="user-avatar me-2 bg-white">
-                            <i class="fas fa-user"></i>
-                        </div>
-                        <span class="d-none d-md-inline">Mon compte</span>
-                        <i class="fas fa-chevron-down ms-2 d-none d-md-inline"></i>
-                    </a>
-                    <ul class="dropdown-menu dropdown-menu-end shadow" aria-labelledby="userDropdown">
-                        <li><div class="dropdown-header bg-light py-3">Thomas Bernard</div></li>
-                        <li><a class="dropdown-item py-2" href="#"><i class="fas fa-user-circle me-2"></i>Mon profil</a></li>
-                        <li><a class="dropdown-item py-2" href="#"><i class="fas fa-cog me-2"></i>Paramètres</a></li>
-                        <li><a class="dropdown-item py-2" href="#"><i class="fas fa-question-circle me-2"></i>Aide</a></li>
-                        <li><hr class="dropdown-divider"></li>
-                        <li><a class="dropdown-item text-danger py-2" href="#"><i class="fas fa-sign-out-alt me-2"></i>Déconnexion</a></li>
-                    </ul>
-                </div>
-            </div>
-        </div>
+// Initialisation des compteurs
+$nb_en_attente = 0;
+$nb_urgents = 0;
+$nb_encours = 0;
+$nb_valides_aujourdhui = 0;
+$nb_a_reviser = 0;
+$nb_rapports_urgents = 0;
+
+try {
+    $nb_en_attente = $pdo->query("SELECT COUNT(*) FROM valider WHERE etat_valide = 'en attente'")->fetchColumn();
+    $nb_urgents = $pdo->query("SELECT COUNT(*) FROM tache_enseignant WHERE statut = 'urgent' AND date_limite < CURDATE()")->fetchColumn();
+    $nb_encours = $pdo->query("SELECT COUNT(*) FROM tache_enseignant WHERE statut IN ('important', 'en_cours')")->fetchColumn();
+    $nb_valides_aujourdhui = $pdo->query("SELECT COUNT(*) FROM valider WHERE etat_valide = 'validé' AND DATE(date_validation) = CURDATE()")->fetchColumn();
+    $nb_a_reviser = $pdo->query("SELECT COUNT(*) FROM valider WHERE etat_valide = 'rejeté'")->fetchColumn();
+
+    $nb_rapports_urgents = $pdo->query("
+        SELECT COUNT(*) 
+        FROM rapport_etudiant r
+        JOIN valider v ON r.id_rapport = v.id_rapport
+        WHERE v.etat_valide = 'en attente'
+        AND DATEDIFF(CURDATE(), r.dte_rapport) > 7
+    ")->fetchColumn();
+} catch (PDOException $e) {
+    // Gérer les erreurs proprement si besoin
+    echo "<div class='alert alert-danger'>Erreur lors du chargement des statistiques : " . $e->getMessage() . "</div>";
+}
+
+
+// Statistiques globales (rapport_etudiant.id_jury représente le statut)
+$nb_soumis = $pdo->query("SELECT COUNT(*) FROM rapport_etudiant WHERE id_jury = 1")->fetchColumn();         // Soumis
+$nb_examen = $pdo->query("SELECT COUNT(*) FROM rapport_etudiant WHERE id_jury = 2")->fetchColumn();         // En examen
+$nb_evaluation = $pdo->query("SELECT COUNT(*) FROM rapport_etudiant WHERE id_jury = 4")->fetchColumn();     // En évaluation
+$nb_approuves = $pdo->query("SELECT COUNT(*) FROM rapport_etudiant WHERE id_jury = 3")->fetchColumn();      // Approuvés
+
+// Affectations globales (sans filtrer par enseignant)
+$nb_rapport_a_evaluer = $pdo->query("SELECT COUNT(*) FROM evaluer")->fetchColumn();
+$nb_a_reviser = $pdo->query("SELECT COUNT(*) FROM valider WHERE etat_valide = 'rejeté'")->fetchColumn();
+$nb_valides = $pdo->query("SELECT COUNT(*) FROM valider WHERE etat_valide = 'validé' AND WEEK(date_validation) = WEEK(CURDATE())")->fetchColumn();
+
+
+
+// Charger les rapports en attente de validation
+$sql = "
+    SELECT 
+        r.id_rapport,
+        r.titre,
+        r.resume,
+        r.type_rapport,
+        r.date_depot,
+        r.etat_validation,
+        e.nom_etu,
+        e.prenoms_etu,
+        ne.code AS niveau_code,
+        ens.nom_ens,
+        ens.prenoms_ens
+    FROM rapport_etudiant r
+    JOIN etudiant e ON r.num_etu = e.num_etu
+    LEFT JOIN inscrire i ON i.num_etu = e.num_etu
+    LEFT JOIN niveau_etude ne ON i.id_niv_etu = ne.id_niv_etu
+    LEFT JOIN valider v ON v.id_rapport = r.id_rapport
+    LEFT JOIN enseignant ens ON v.id_ens = ens.id_ens
+    WHERE r.etat_validation IN ('attente', 'encours')
+    ORDER BY r.date_depot ASC
+";
+
+$stmt = $pdo->prepare($sql);
+$stmt->execute();
+$rapports = $stmt->fetchAll(PDO::FETCH_ASSOC);
+?>
+
 
         <div class="content-area">
             <!-- Priority Alerts -->
-            <div class="row g-4 mb-4">
-                <div class="col-12">
-                    <div class="alert alert-warning border-0 shadow-sm">
-                        <div class="d-flex align-items-center">
-                            <i class="fas fa-exclamation-triangle fa-2x me-3"></i>
-                            <div class="flex-grow-1">
-                                <h5 class="alert-heading mb-1">Rapports en attente urgente</h5>
-                                <p class="mb-0">3 rapports dépassent le délai de validation standard (7 jours). Action requise immédiatement.</p>
+            <?php if ($nb_rapports_urgents > 0): ?>
+                <div class="row g-4 mb-4">
+                    <div class="col-12">
+                        <div class="alert alert-warning border-0 shadow-sm">
+                            <div class="d-flex align-items-center">
+                                <i class="fas fa-exclamation-triangle fa-2x me-3"></i>
+                                <div class="flex-grow-1">
+                                    <h5 class="alert-heading mb-1">Rapports en attente urgente</h5>
+                                    <p class="mb-0"><?= $nb_rapports_urgents ?> rapports dépassent le délai de validation standard (7 jours).</p>
+                                </div>
+                                <button class="btn btn-warning" onclick="showUrgentReports()">
+                                    <i class="fas fa-eye me-1"></i>Voir
+                                </button>
                             </div>
-                            <button class="btn btn-warning" onclick="showUrgentReports()">
-                                <i class="fas fa-eye me-1"></i>Voir
-                            </button>
                         </div>
                     </div>
                 </div>
-            </div>
+            <?php endif; ?>
+
+
 
             <!-- Validation Statistics -->
             <div class="row g-4 mb-4">
@@ -89,9 +104,9 @@
                                 <i class="fas fa-clock"></i>
                             </div>
                             <div class="stats-title">En attente</div>
-                            <div class="stats-number">12</div>
+                            <div class="stats-number"><?= $nb_en_attente ?></div>
                             <div class="stats-trend">
-                                <i class="fas fa-exclamation-triangle text-danger"></i> 3 urgents
+                                <i class="fas fa-exclamation-triangle text-danger"></i> <?= $nb_urgents ?> urgents
                             </div>
                         </div>
                     </div>
@@ -103,7 +118,7 @@
                                 <i class="fas fa-eye"></i>
                             </div>
                             <div class="stats-title">En cours d'examen</div>
-                            <div class="stats-number">8</div>
+                            <div class="stats-number"><?= $nb_encours ?></div>
                             <div class="stats-trend">
                                 <i class="fas fa-user-check"></i> Assignés
                             </div>
@@ -117,10 +132,7 @@
                                 <i class="fas fa-check-circle"></i>
                             </div>
                             <div class="stats-title">Validés aujourd'hui</div>
-                            <div class="stats-number">5</div>
-                            <div class="stats-trend">
-                                <i class="fas fa-arrow-up"></i> +2 par rapport à hier
-                            </div>
+                            <div class="stats-number"><?= $nb_valides_aujourdhui ?></div>
                         </div>
                     </div>
                 </div>
@@ -131,7 +143,7 @@
                                 <i class="fas fa-times-circle"></i>
                             </div>
                             <div class="stats-title">Nécessitent révision</div>
-                            <div class="stats-number">3</div>
+                            <div class="stats-number"><?= $nb_a_reviser ?></div>
                             <div class="stats-trend">
                                 <i class="fas fa-redo"></i> À revoir
                             </div>
@@ -140,8 +152,10 @@
                 </div>
             </div>
 
+
             <!-- Validation Workflow -->
             <div class="row g-4 mb-4">
+                <!-- Bloc gauche : Processus de validation -->
                 <div class="col-md-8">
                     <div class="dashboard-card">
                         <h5 class="mb-4"><i class="fas fa-route me-2"></i>Processus de Validation</h5>
@@ -180,60 +194,62 @@
                         <div class="mt-4">
                             <div class="row text-center">
                                 <div class="col-3">
-                                    <h4 class="text-primary">124</h4>
+                                    <h4 class="text-primary"><?= $nb_soumis ?></h4>
                                     <small>Soumis</small>
                                 </div>
                                 <div class="col-3">
-                                    <h4 class="text-warning">20</h4>
+                                    <h4 class="text-warning"><?= $nb_examen ?></h4>
                                     <small>En examen</small>
                                 </div>
                                 <div class="col-3">
-                                    <h4 class="text-info">15</h4>
+                                    <h4 class="text-info"><?= $nb_evaluation ?></h4>
                                     <small>En évaluation</small>
                                 </div>
                                 <div class="col-3">
-                                    <h4 class="text-success">89</h4>
+                                    <h4 class="text-success"><?= $nb_approuves ?></h4>
                                     <small>Approuvés</small>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
-                
+
+                <!-- Bloc droit : Affectations globales -->
                 <div class="col-md-4">
                     <div class="dashboard-card h-100">
-                        <h6 class="mb-3"><i class="fas fa-user-tie me-2"></i>Mes Affectations</h6>
+                        <h6 class="mb-3"><i class="fas fa-user-tie me-2"></i>Affectations</h6>
                         <div class="list-group list-group-flush">
                             <div class="list-group-item d-flex justify-content-between align-items-center px-0">
                                 <div>
                                     <div class="fw-bold">Rapports à évaluer</div>
-                                    <small class="text-muted">Assignés à moi</small>
+                                    <small class="text-muted">Tous les enseignants</small>
                                 </div>
-                                <span class="badge bg-warning rounded-pill">4</span>
+                                <span class="badge bg-warning rounded-pill"><?= $nb_rapport_a_evaluer ?></span>
                             </div>
                             <div class="list-group-item d-flex justify-content-between align-items-center px-0">
                                 <div>
-                                    <div class="fw-bold">En attente de ma révision</div>
-                                    <small class="text-muted">Corrections demandées</small>
+                                    <div class="fw-bold">Demandes de révision</div>
+                                    <small class="text-muted">Corrections rejetées</small>
                                 </div>
-                                <span class="badge bg-info rounded-pill">2</span>
+                                <span class="badge bg-info rounded-pill"><?= $nb_a_reviser ?></span>
                             </div>
                             <div class="list-group-item d-flex justify-content-between align-items-center px-0">
                                 <div>
-                                    <div class="fw-bold">Validés par moi</div>
-                                    <small class="text-muted">Cette semaine</small>
+                                    <div class="fw-bold">Validés cette semaine</div>
+                                    <small class="text-muted">Tous enseignants</small>
                                 </div>
-                                <span class="badge bg-success rounded-pill">7</span>
+                                <span class="badge bg-success rounded-pill"><?= $nb_valides ?></span>
                             </div>
                         </div>
                         <div class="text-center mt-3">
                             <button class="btn btn-outline-primary btn-sm" onclick="showMyAssignments()">
-                                <i class="fas fa-list me-1"></i>Voir tous mes rapports
+                                <i class="fas fa-list me-1"></i>Voir tous les rapports
                             </button>
                         </div>
                     </div>
                 </div>
             </div>
+
 
             <!-- Validation Queue -->
             <div class="dashboard-card">
@@ -334,50 +350,69 @@
                             </tr>
                         </thead>
                         <tbody id="validationTableBody">
-                            <tr class="table-warning">
-                                <td>
-                                    <input type="checkbox" class="form-check-input validation-checkbox" value="1">
-                                </td>
-                                <td>
-                                    <span class="badge bg-danger">Urgent</span>
-                                </td>
+                            <?php foreach ($rapports as $rapport):
+                                // Déterminer l'urgence (si > 7 jours depuis dépôt)
+                                $depot = new DateTime($rapport['date_depot']);
+                                $now = new DateTime();
+                                $diff = $depot->diff($now)->days;
+
+                                $isUrgent = $diff > 7;
+                                $badgeUrgence = $isUrgent ? 'danger' : 'warning';
+                                $urgenceText = $isUrgent ? 'Urgent' : 'Normal';
+                                $delaiBadge = $isUrgent ? 'bg-danger' : 'bg-success';
+
+                                $nomEtudiant = htmlspecialchars($rapport['prenoms_etu'] . ' ' . $rapport['nom_etu']);
+                                $titre = htmlspecialchars($rapport['titre']);
+                                $resume = htmlspecialchars($rapport['resume']);
+                                $type = ucfirst($rapport['type_rapport']);
+                                $niveau = htmlspecialchars($rapport['niveau_code'] ?? 'N/A');
+                                $enseignant = $rapport['nom_ens'] ? 'Dr. ' . htmlspecialchars($rapport['nom_ens']) : 'Non assigné';
+
+                                $badgeStatut = match ($rapport['etat_validation']) {
+                                    'attente' => 'warning',
+                                    'encours' => 'info',
+                                    'valide' => 'success',
+                                    default => 'secondary'
+                                };
+                            ?>
+                            <tr class="table-<?= $badgeUrgence ?>">
+                                <td><input type="checkbox" class="form-check-input validation-checkbox" value="<?= $rapport['id_rapport'] ?>"></td>
+                                <td><span class="badge bg-<?= $badgeUrgence ?>"><?= $urgenceText ?></span></td>
                                 <td>
                                     <div class="d-flex align-items-center">
                                         <div class="user-avatar me-2 bg-primary text-white">
                                             <i class="fas fa-user"></i>
                                         </div>
                                         <div>
-                                            <div class="fw-bold">Koné Mamadou</div>
-                                            <small class="text-muted">Master 2</small>
+                                            <div class="fw-bold"><?= $nomEtudiant ?></div>
+                                            <small class="text-muted"><?= $niveau ?></small>
                                         </div>
                                     </div>
                                 </td>
                                 <td>
                                     <div>
-                                        <div class="fw-bold">Application mobile de gestion de stocks</div>
-                                        <small class="text-muted">Développement Android avec Firebase</small>
+                                        <div class="fw-bold"><?= $titre ?></div>
+                                        <small class="text-muted"><?= $resume ?></small>
                                     </div>
                                 </td>
-                                <td><span class="badge bg-primary">Mémoire</span></td>
-                                <td>18/05/2025</td>
+                                <td><span class="badge bg-primary"><?= $type ?></span></td>
+                                <td><?= (new DateTime($rapport['date_depot']))->format('d/m/Y') ?></td>
+                                <td><span class="badge <?= $delaiBadge ?>"><i class="fas fa-clock me-1"></i><?= $diff ?> jours</span></td>
                                 <td>
-                                    <span class="badge bg-danger">
-                                        <i class="fas fa-clock me-1"></i>8 jours
-                                    </span>
+                                    <?= $rapport['nom_ens'] ? '<div class="d-flex align-items-center"><small>' . $enseignant . '</small></div>' : '<span class="text-danger">Non assigné</span>' ?>
                                 </td>
-                                <td>
-                                    <span class="text-danger">Non assigné</span>
-                                </td>
-                                <td><span class="badge bg-warning">En attente</span></td>
+                                <td><span class="badge bg-<?= $badgeStatut ?>"><?= ucfirst($rapport['etat_validation']) ?></span></td>
                                 <td>
                                     <div class="btn-group" role="group">
-                                        <button class="btn btn-sm btn-outline-primary" title="Examiner" onclick="examineReport(1)">
+                                        <button class="btn btn-sm btn-outline-primary" title="Examiner" onclick="examineReport(<?= $rapport['id_rapport'] ?>)">
                                             <i class="fas fa-search"></i>
                                         </button>
-                                        <button class="btn btn-sm btn-outline-success" title="Assigner" onclick="assignReport(1)">
-                                            <i class="fas fa-user-tag"></i>
-                                        </button>
-                                        <button class="btn btn-sm btn-outline-warning" title="Commentaire" onclick="addValidationComment(1)">
+                                        <?php if (!$rapport['nom_ens']): ?>
+                                            <button class="btn btn-sm btn-outline-success" title="Assigner" onclick="assignReport(<?= $rapport['id_rapport'] ?>)">
+                                                <i class="fas fa-user-tag"></i>
+                                            </button>
+                                        <?php endif; ?>
+                                        <button class="btn btn-sm btn-outline-warning" title="Commentaire" onclick="addValidationComment(<?= $rapport['id_rapport'] ?>)">
                                             <i class="fas fa-comment"></i>
                                         </button>
                                         <div class="btn-group">
@@ -385,13 +420,13 @@
                                                 <i class="fas fa-cog"></i>
                                             </button>
                                             <ul class="dropdown-menu">
-                                                <li><a class="dropdown-item" href="#" onclick="validateQuick(1)">
+                                                <li><a class="dropdown-item" href="#" onclick="validateQuick(<?= $rapport['id_rapport'] ?>)">
                                                     <i class="fas fa-check text-success me-2"></i>Validation rapide
                                                 </a></li>
-                                                <li><a class="dropdown-item" href="#" onclick="requestRevision(1)">
+                                                <li><a class="dropdown-item" href="#" onclick="requestRevision(<?= $rapport['id_rapport'] ?>)">
                                                     <i class="fas fa-edit text-warning me-2"></i>Demander révision
                                                 </a></li>
-                                                <li><a class="dropdown-item" href="#" onclick="rejectReport(1)">
+                                                <li><a class="dropdown-item" href="#" onclick="rejectReport(<?= $rapport['id_rapport'] ?>)">
                                                     <i class="fas fa-times text-danger me-2"></i>Rejeter
                                                 </a></li>
                                             </ul>
@@ -399,107 +434,7 @@
                                     </div>
                                 </td>
                             </tr>
-                            <tr>
-                                <td>
-                                    <input type="checkbox" class="form-check-input validation-checkbox" value="2">
-                                </td>
-                                <td>
-                                    <span class="badge bg-warning">Normal</span>
-                                </td>
-                                <td>
-                                    <div class="d-flex align-items-center">
-                                        <div class="user-avatar me-2 bg-success text-white">
-                                            <i class="fas fa-user"></i>
-                                        </div>
-                                        <div>
-                                            <div class="fw-bold">Yao Marie Ange</div>
-                                            <small class="text-muted">Master 1</small>
-                                        </div>
-                                    </div>
-                                </td>
-                                <td>
-                                    <div>
-                                        <div class="fw-bold">Système de gestion de bibliothèque</div>
-                                        <small class="text-muted">Conception UML et implémentation</small>
-                                    </div>
-                                </td>
-                                <td><span class="badge bg-warning text-dark">Stage</span></td>
-                                <td>23/05/2025</td>
-                                <td>
-                                    <span class="badge bg-success">
-                                        <i class="fas fa-clock me-1"></i>3 jours
-                                    </span>
-                                </td>
-                                <td>
-                                    <div class="d-flex align-items-center">
-                                        <img src="https://via.placeholder.com/24" class="rounded-circle me-1" alt="Avatar">
-                                        <small>Dr. Diabaté</small>
-                                    </div>
-                                </td>
-                                <td><span class="badge bg-info">En cours</span></td>
-                                <td>
-                                    <div class="btn-group" role="group">
-                                        <button class="btn btn-sm btn-outline-primary" title="Examiner" onclick="examineReport(2)">
-                                            <i class="fas fa-search"></i>
-                                        </button>
-                                        <button class="btn btn-sm btn-outline-warning" title="Commentaire" onclick="addValidationComment(2)">
-                                            <i class="fas fa-comment"></i>
-                                        </button>
-                                        <button class="btn btn-sm btn-outline-info" title="Historique" onclick="viewValidationHistory(2)">
-                                            <i class="fas fa-history"></i>
-                                        </button>
-                                    </div>
-                                </td>
-                            </tr>
-                            <tr>
-                                <td>
-                                    <input type="checkbox" class="form-check-input validation-checkbox" value="3">
-                                </td>
-                                <td>
-                                    <span class="badge bg-secondary">Normal</span>
-                                </td>
-                                <td>
-                                    <div class="d-flex align-items-center">
-                                        <div class="user-avatar me-2 bg-warning text-white">
-                                            <i class="fas fa-user"></i>
-                                        </div>
-                                        <div>
-                                            <div class="fw-bold">Bamba Issouf</div>
-                                            <small class="text-muted">Licence 3</small>
-                                        </div>
-                                    </div>
-                                </td>
-                                <td>
-                                    <div>
-                                        <div class="fw-bold">Algorithmes de tri et optimisation</div>
-                                        <small class="text-muted">Étude comparative des performances</small>
-                                    </div>
-                                </td>
-                                <td><span class="badge bg-info">Projet</span></td>
-                                <td>25/05/2025</td>
-                                <td>
-                                    <span class="badge bg-success">
-                                        <i class="fas fa-clock me-1"></i>1 jour
-                                    </span>
-                                </td>
-                                <td>
-                                    <span class="text-muted">Non assigné</span>
-                                </td>
-                                <td><span class="badge bg-warning">En attente</span></td>
-                                <td>
-                                    <div class="btn-group" role="group">
-                                        <button class="btn btn-sm btn-outline-primary" title="Examiner" onclick="examineReport(3)">
-                                            <i class="fas fa-search"></i>
-                                        </button>
-                                        <button class="btn btn-sm btn-outline-success" title="Assigner" onclick="assignReport(3)">
-                                            <i class="fas fa-user-tag"></i>
-                                        </button>
-                                        <button class="btn btn-sm btn-outline-warning" title="Commentaire" onclick="addValidationComment(3)">
-                                            <i class="fas fa-comment"></i>
-                                        </button>
-                                    </div>
-                                </td>
-                            </tr>
+                            <?php endforeach; ?>
                         </tbody>
                     </table>
                 </div>
@@ -722,6 +657,63 @@
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
     <script>
+
+        //Gestion notif rapport urgents
+        document.addEventListener("DOMContentLoaded", () => {
+                fetch('../pages/ecrans_gestionnaire/check_urgent_rapports.php')
+                    .then(res => res.json())
+                    .then(data => {
+                        const container = document.getElementById('urgentAlertContainer');
+
+                        if (data.error) {
+                            console.error(data.error);
+                            return;
+                        }
+
+                        if (data.length === 0) return; // Aucun rapport urgent
+
+                        const alertHTML = `
+                            <div class="col-12">
+                                <div class="alert alert-warning border-0 shadow-sm">
+                                    <div class="d-flex align-items-center">
+                                        <i class="fas fa-exclamation-triangle fa-2x me-3"></i>
+                                        <div class="flex-grow-1">
+                                            <h5 class="alert-heading mb-1">Rapports en attente urgente</h5>
+                                            <p class="mb-0">${data.length} rapport(s) dépassent le délai de validation standard (7 jours).</p>
+                                        </div>
+                                        <button class="btn btn-warning" onclick="showUrgentReports()">
+                                            <i class="fas fa-eye me-1"></i>Voir
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                        container.innerHTML = alertHTML;
+
+                        // Tu peux stocker les rapports pour affichage modal
+                        window.urgentRapports = data;
+                    })
+                    .catch(err => console.error("Erreur de chargement des rapports urgents :", err));
+            });
+
+            function showUrgentReports() {
+                if (!window.urgentRapports || window.urgentRapports.length === 0) {
+                    alert("Aucun rapport urgent.");
+                    return;
+                }
+
+                let content = "<ul class='list-group'>";
+                window.urgentRapports.forEach(r => {
+                    content += `
+                        <li class="list-group-item">
+                            <strong>${r.titre}</strong> - ${r.nom} ${r.prenoms} (déposé le ${r.date_depot})
+                        </li>`;
+                });
+                content += "</ul>";
+
+                // Tu peux aussi afficher dans un modal Bootstrap si tu veux
+                alert(`Rapports urgents:\n\n` + window.urgentRapports.map(r => `• ${r.titre} (${r.date_depot})`).join('\n'));
+            }
         // Auto-calculate final grade
         function calculateFinalGrade() {
             const form = document.getElementById('evaluationForm');
