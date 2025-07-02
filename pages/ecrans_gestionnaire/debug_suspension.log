@@ -10,3 +10,9 @@
 2025-07-02 03:00:05 Début action: id_ens=3, action=reactiver, raison=null
 2025-07-02 03:00:05 statut enseignant réactivé OK
 2025-07-02 03:00:05 suspension clôturée OK
+2025-07-02 18:28:34 Début action: id_ens=6, action=suspendre, raison=Il n'a rien fait
+2025-07-02 18:28:34 statut enseignant suspendu OK
+2025-07-02 18:28:34 insertion suspension OK
+2025-07-02 18:28:38 Début action: id_ens=6, action=reactiver, raison=null
+2025-07-02 18:28:38 statut enseignant réactivé OK
+2025-07-02 18:28:38 suspension clôturée OK

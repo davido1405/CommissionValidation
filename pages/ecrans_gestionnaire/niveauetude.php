@@ -286,12 +286,6 @@ function statutLabel(int $actif): array {
                                             <button class="btn btn-sm btn-outline-warning" title="Modifier" onclick="editLevel(<?= (int)$niv['id_niv_etu'] ?>)">
                                                 <i class="fas fa-edit"></i>
                                             </button>
-                                            <button class="btn btn-sm btn-outline-info" title="Spécialisations" onclick="manageSpecializations(<?= (int)$niv['id_niv_etu'] ?>)">
-                                                <i class="fas fa-tags"></i>
-                                            </button>
-                                            <button class="btn btn-sm btn-outline-danger" title="Archiver" onclick="archiveLevel(<?= (int)$niv['id_niv_etu'] ?>)">
-                                                <i class="fas fa-archive"></i>
-                                            </button>
                                         </div>
                                     </td>
                                 </tr>
@@ -306,102 +300,102 @@ function statutLabel(int $actif): array {
     </div>
 
     <!-- Add Level Modal -->
-<div class="modal fade" id="addLevelModal" tabindex="-1" aria-labelledby="addLevelModalLabel" aria-hidden="true">
-  <div class="modal-dialog modal-lg">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title" id="addLevelModalLabel">
-          <i class="fas fa-plus me-2"></i>Ajouter un nouveau niveau d'étude
-        </h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-      <div class="modal-body">
-        <form id="addLevelForm" novalidate>
-          <div class="row g-3">
-            <div class="col-md-6">
-              <label for="levelCode" class="form-label">Code <span class="text-danger">*</span></label>
-              <input type="text" class="form-control" id="levelCode" name="code" required>
-              <div class="form-text">Ex: L1, L2, M1, M2, D1...</div>
-              <div class="invalid-feedback">Le code est obligatoire.</div>
-            </div>
-            <div class="col-md-6">
-              <label for="levelName" class="form-label">Nom du niveau <span class="text-danger">*</span></label>
-              <input type="text" class="form-control" id="levelName" name="lib_niv_etu" required>
-              <div class="invalid-feedback">Le nom du niveau est obligatoire.</div>
-            </div>
-            <div class="col-md-6">
-              <label for="levelCycle" class="form-label">Cycle <span class="text-danger">*</span></label>
-              <select class="form-select" id="levelCycle" name="cycle" required>
-                <option value="">Choisir...</option>
-                <option value="Licence">Licence (L)</option>
-                <option value="Master">Master (M)</option>
-                <option value="Doctorat">Doctorat (D)</option>
-              </select>
-              <div class="invalid-feedback">Le cycle est obligatoire.</div>
-            </div>
-            <div class="col-md-6">
-              <label for="levelDuration" class="form-label">Durée (années) <span class="text-danger">*</span></label>
-              <select class="form-select" id="levelDuration" name="duree" required>
-                <option value="">Choisir...</option>
-                <option value="1">1 an</option>
-                <option value="2">2 ans</option>
-                <option value="3">3 ans</option>
-                <option value="4">4 ans</option>
-              </select>
-              <div class="invalid-feedback">La durée est obligatoire.</div>
-            </div>
-            <div class="col-md-6">
-              <label for="levelCredits" class="form-label">Crédits requis <span class="text-danger">*</span></label>
-              <input type="number" class="form-control" id="levelCredits" name="credits" min="30" max="180" required>
-              <div class="form-text">Crédits ECTS nécessaires pour valider le niveau</div>
-              <div class="invalid-feedback">Veuillez saisir un nombre entre 30 et 180.</div>
-            </div>
-            <div class="col-md-6">
-              <label for="levelOrder" class="form-label">Ordre d'affichage</label>
-              <input type="number" class="form-control" id="levelOrder" name="ordre" min="1" placeholder="1">
-            </div>
-            <div class="col-12">
-              <div class="form-check">
-                <input class="form-check-input" type="checkbox" id="levelActive" name="actif" checked>
-                <label class="form-check-label" for="levelActive">
-                  Niveau actif (ouvert aux inscriptions)
-                </label>
-              </div>
-            </div>
-          </div>
-        </form>
-        <div id="addLevelAlert" class="alert d-none mt-3" role="alert"></div>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
-        <button type="button" class="btn btn-primary" onclick="saveLevel()">
-          <i class="fas fa-save me-2"></i>Enregistrer
-        </button>
-      </div>
-    </div>
-  </div>
-</div>
-
-
-    <!-- View Level Modal -->
-    <div class="modal fade" id="viewLevelModal" tabindex="-1" aria-labelledby="viewLevelModalLabel" aria-hidden="true">
+    <div class="modal fade" id="addLevelModal" tabindex="-1" aria-labelledby="addLevelModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="viewLevelModalLabel">
-                        <i class="fas fa-info-circle me-2"></i>Détails du niveau d'étude
-                    </h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            <div class="modal-header">
+                <h5 class="modal-title" id="addLevelModalLabel">
+                <i class="fas fa-plus me-2"></i>Ajouter un nouveau niveau d'étude
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="addLevelForm" novalidate>
+                <div class="row g-3">
+                    <div class="col-md-6">
+                    <label for="levelCode" class="form-label">Code <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control" id="levelCode" name="code" required>
+                    <div class="form-text">Ex: L1, L2, M1, M2, D1...</div>
+                    <div class="invalid-feedback">Le code est obligatoire.</div>
+                    </div>
+                    <div class="col-md-6">
+                    <label for="levelName" class="form-label">Nom du niveau <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control" id="levelName" name="lib_niv_etu" required>
+                    <div class="invalid-feedback">Le nom du niveau est obligatoire.</div>
+                    </div>
+                    <div class="col-md-6">
+                    <label for="levelCycle" class="form-label">Cycle <span class="text-danger">*</span></label>
+                    <select class="form-select" id="levelCycle" name="cycle" required>
+                        <option value="">Choisir...</option>
+                        <option value="Licence">Licence (L)</option>
+                        <option value="Master">Master (M)</option>
+                        <option value="Doctorat">Doctorat (D)</option>
+                    </select>
+                    <div class="invalid-feedback">Le cycle est obligatoire.</div>
+                    </div>
+                    <div class="col-md-6">
+                    <label for="levelDuration" class="form-label">Durée (années) <span class="text-danger">*</span></label>
+                    <select class="form-select" id="levelDuration" name="duree" required>
+                        <option value="">Choisir...</option>
+                        <option value="1">1 an</option>
+                        <option value="2">2 ans</option>
+                        <option value="3">3 ans</option>
+                        <option value="4">4 ans</option>
+                    </select>
+                    <div class="invalid-feedback">La durée est obligatoire.</div>
+                    </div>
+                    <div class="col-md-6">
+                    <label for="levelCredits" class="form-label">Crédits requis <span class="text-danger">*</span></label>
+                    <input type="number" class="form-control" id="levelCredits" name="credits" min="30" max="180" required>
+                    <div class="form-text">Crédits ECTS nécessaires pour valider le niveau</div>
+                    <div class="invalid-feedback">Veuillez saisir un nombre entre 30 et 180.</div>
+                    </div>
+                    <div class="col-md-6">
+                    <label for="levelOrder" class="form-label">Ordre d'affichage</label>
+                    <input type="number" class="form-control" id="levelOrder" name="ordre" min="1" placeholder="1">
+                    </div>
+                    <div class="col-12">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="levelActive" name="actif" checked>
+                        <label class="form-check-label" for="levelActive">
+                        Niveau actif (ouvert aux inscriptions)
+                        </label>
+                    </div>
+                    </div>
                 </div>
-                <div class="modal-body" id="levelDetailsContent">
-                    <!-- Content will be loaded dynamically -->
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
-                </div>
+                </form>
+                <div id="addLevelAlert" class="alert d-none mt-3" role="alert"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                <button type="button" class="btn btn-primary" onclick="saveLevel()">
+                <i class="fas fa-save me-2"></i>Enregistrer
+                </button>
+            </div>
             </div>
         </div>
     </div>
+
+
+    <!-- Modal -->
+    <div class="modal fade" id="viewLevelModal" tabindex="-1" aria-labelledby="viewLevelModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable">
+            <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="viewLevelModalLabel">Détails du niveau d'étude</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
+            </div>
+            <div class="modal-body" id="levelDetailsContent">
+                <!-- Contenu chargé dynamiquement ici -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
+            </div>
+            </div>
+        </div>
+    </div>
+
+
 
     <!-- Specializations Modal -->
     <div class="modal fade" id="specializationsModal" tabindex="-1" aria-labelledby="specializationsModalLabel" aria-hidden="true">
@@ -459,131 +453,76 @@ function statutLabel(int $actif): array {
             filterLevels();
         }
 
-        // Level management functions
         function viewLevel(id) {
-            console.log('Viewing level:', id);
-            
-            const levelData = {
-                1: {
-                    code: 'L1',
-                    name: 'Licence 1',
-                    cycle: 'Licence',
-                    duration: '1 an',
-                    credits: 60,
-                    students: 95,
-                    description: 'Première année du cycle de licence, formation généraliste en informatique et mathématiques.',
-                    prerequisites: 'Baccalauréat scientifique ou équivalent'
-                }
-                // Add more level data as needed
-            };
-            
-            const level = levelData[id] || levelData[1];
-            
-            const detailsContent = `
-                <div class="row">
-                    <div class="col-md-6">
-                        <h6>Informations générales</h6>
-                        <p><strong>Code:</strong> ${level.code}</p>
-                        <p><strong>Nom:</strong> ${level.name}</p>
-                        <p><strong>Cycle:</strong> <span class="badge bg-success">${level.cycle}</span></p>
-                        <p><strong>Durée:</strong> ${level.duration}</p>
-                        <p><strong>Crédits requis:</strong> <span class="badge bg-primary">${level.credits} crédits</span></p>
+            fetch(`../pages/ecrans_gestionnaire/voir_niveau.php?id=${id}`)
+                .then(response => response.text())
+                .then(text => {
+                    // Essayer de parser manuellement le JSON
+                    let level;
+                    try {
+                        level = JSON.parse(text);
+                    } catch (e) {
+                        console.error("Erreur JSON :", e);
+                        console.error("Réponse brute :", text);
+                        alert("Erreur de format : la réponse du serveur n'est pas du JSON valide.");
+                        return;
+                    }
+
+                    // Gérer les erreurs renvoyées par PHP
+                    if (level.error) {
+                        alert("Erreur : " + level.error);
+                        return;
+                    }
+
+                    // Construction du contenu HTML
+                    const detailsContent = `
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>Informations générales</h6>
+                            <p><strong>Code:</strong> ${level.code}</p>
+                            <p><strong>Nom:</strong> ${level.lib_niv_etu}</p>
+                            <p><strong>Cycle:</strong> <span class="badge bg-success">${level.cycle}</span></p>
+                            <p><strong>Durée:</strong> ${level.duree}</p>
+                            <p><strong>Crédits requis:</strong> <span class="badge bg-primary">${level.credits} crédits</span></p>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Statistiques</h6>
+                            <p><strong>Étudiants inscrits:</strong> ${level.nb_etudiants}</p>
+                            <p><strong>Taux de réussite:</strong> ${level.success_rate}%</p>
+                            <p><strong>Spécialisations:</strong> ${level.nb_specialites ? level.nb_specialites : 'Non renseigné'}</p>
+                            <p><strong>UE disponibles:</strong> ${level.nb_ue}</p>
+                        </div>
                     </div>
-                    <div class="col-md-6">
-                        <h6>Statistiques</h6>
-                        <p><strong>Étudiants inscrits:</strong> ${level.students}</p>
-                        <p><strong>Taux de réussite:</strong> 85%</p>
-                        <p><strong>Spécialisations:</strong> 3</p>
-                        <p><strong>UE disponibles:</strong> 12</p>
+                    <hr>
+                    <div class="row">
+                        <div class="col-12">
+                            <h6>Description</h6>
+                            <p>${level.description || 'Non renseignée'}</p>
+                        </div>
+                        <div class="col-12">
+                            <h6>Prérequis</h6>
+                            <p>${level.prerequisites || 'Non renseignés'}</p>
+                        </div>
                     </div>
-                </div>
-                <hr>
-                <div class="row">
-                    <div class="col-12">
-                        <h6>Description</h6>
-                        <p>${level.description}</p>
-                    </div>
-                    <div class="col-12">
-                        <h6>Prérequis</h6>
-                        <p>${level.prerequisites}</p>
-                    </div>
-                </div>
-            `;
-            
-            document.getElementById('levelDetailsContent').innerHTML = detailsContent;
-            new bootstrap.Modal(document.getElementById('viewLevelModal')).show();
+                `;
+
+
+                    // Injecter et afficher le modal
+                    document.getElementById('levelDetailsContent').innerHTML = detailsContent;
+                    new bootstrap.Modal(document.getElementById('viewLevelModal')).show();
+                })
+                .catch(error => {
+                    alert("Erreur lors de la récupération des données.");
+                    console.error("Erreur fetch :", error);
+                });
         }
+
+
+
 
         function editLevel(id) {
             console.log('Editing level:', id);
             // Open edit modal with pre-filled data
-        }
-
-        function manageSpecializations(id) {
-            console.log('Managing specializations for level:', id);
-            
-            const specializationsContent = `
-                <div class="table-responsive">
-                    <table class="table table-sm">
-                        <thead>
-                            <tr>
-                                <th>Code</th>
-                                <th>Spécialisation</th>
-                                <th>Étudiants</th>
-                                <th>Statut</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                <td>INFO</td>
-                                <td>Informatique</td>
-                                <td>45</td>
-                                <td><span class="badge bg-success">Actif</span></td>
-                                <td>
-                                    <button class="btn btn-sm btn-outline-warning" onclick="editSpecialization(1)">
-                                        <i class="fas fa-edit"></i>
-                                    </button>
-                                    <button class="btn btn-sm btn-outline-danger" onclick="deleteSpecialization(1)">
-                                        <i class="fas fa-trash"></i>
-                                    </button>
-                                </td>
-                            </tr>
-                            <tr>
-                                <td>MATH</td>
-                                <td>Mathématiques</td>
-                                <td>30</td>
-                                <td><span class="badge bg-success">Actif</span></td>
-                                <td>
-                                    <button class="btn btn-sm btn-outline-warning" onclick="editSpecialization(2)">
-                                        <i class="fas fa-edit"></i>
-                                    </button>
-                                    <button class="btn btn-sm btn-outline-danger" onclick="deleteSpecialization(2)">
-                                        <i class="fas fa-trash"></i>
-                                    </button>
-                                </td>
-                            </tr>
-                            <tr>
-                                <td>PHYS</td>
-                                <td>Physique</td>
-                                <td>20</td>
-                                <td><span class="badge bg-success">Actif</span></td>
-                                <td>
-                                    <button class="btn btn-sm btn-outline-warning" onclick="editSpecialization(3)">
-                                        <i class="fas fa-edit"></i>
-                                    </button>
-                                    <button class="btn btn-sm btn-outline-danger" onclick="deleteSpecialization(3)">
-                                        <i class="fas fa-trash"></i>
-                                    </button>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            `;
-            
-            document.getElementById('specializationsContent').innerHTML = specializationsContent;
-            new bootstrap.Modal(document.getElementById('specializationsModal')).show();
         }
 
         function archiveLevel(id) {

@@ -90,7 +90,7 @@ $page = $_GET['page'] ?? 'default';
                 </a>
             <?php endif; ?>
 
-            <a href="?page=logout" class="nav-link text-danger mt-4">
+            <a href="../auth/logout.php" class="nav-link text-danger mt-4">
                 <i class="fas fa-sign-out-alt"></i> Déconnexion
             </a>
         </div>
